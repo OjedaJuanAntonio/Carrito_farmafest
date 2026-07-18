@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { branding, brandingCssVars } from "@/config/branding";
 import { Header } from "@/components/Header";
+import { SwRegister } from "@/components/SwRegister";
+import { DataPrefetcher } from "@/components/DataPrefetcher";
 
 export const metadata: Metadata = {
   title: {
@@ -31,6 +33,8 @@ export default function RootLayout({
         <footer className="w-full max-w-lg mx-auto px-4 py-6 text-center text-xs text-ink-muted">
           {branding.name} · {branding.eventDates}
         </footer>
+        <SwRegister />
+        <DataPrefetcher />
       </body>
     </html>
   );

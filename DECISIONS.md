@@ -87,6 +87,38 @@ Formato: contexto → decisión → por qué.
 - **"Ya pasé por la caja"** vacía solo los ítems de ese stand, con
   confirmación inline (sin `window.confirm`, que se ve pobre en mobile).
 
+## PWA / offline (M4)
+
+- **Service worker propio** generado post-build (`scripts/generate-sw.ts`,
+  hook `postbuild`): sin next-pwa/serwist. Con export estático la lista de
+  precache se arma escaneando `out/`, y un SW de ~100 líneas es más fácil de
+  razonar que una dependencia con config.
+- **Precache**: TODO el shell estático (HTML de las ~125 rutas, chunks, CSS,
+  imágenes; ~3 MB) con cache-first. Los HTML se precachean con la URL
+  "bonita" final (`/stand/12/`, no `/stand/12/index.html`) porque los hostings
+  redirigen `/index.html` → `/` y una respuesta `redirected` usada en una
+  navegación es rechazada por el browser. Las URLs se percent-encodean igual
+  que las pide el browser (`[id]` → `%5Bid%5D`), si no el chunk de las rutas
+  dinámicas no se encuentra offline (bug real que nos comimos y arreglamos).
+- **`/data/*.json` NUNCA se precachea**: network-first con timeout de 3,5 s y
+  fallback al cache (`farmafest-data-v1`). Con señal el usuario ve precios
+  frescos; sin señal, los últimos conocidos.
+- **Priming de datos**: 3,5 s después de cargar, la app baja index + los 60
+  JSON de stand en tandas de 8 para dejar TODO el catálogo cacheado (aunque
+  el usuario no haya visitado cada stand). Se repite solo si cambió la
+  versión del manifest (marcador en localStorage).
+- **Preview local con `http-server`** (no `serve`): `serve` aplica cleanUrls
+  con redirects que no existen en nginx/Vercel y rompía el precache; además
+  con serve.json dejaba de resolver index.html. `http-server` se comporta
+  como los hostings reales.
+- **Actualización de la app**: SW nuevo hace skipWaiting + clients.claim y
+  borra los caches estáticos viejos en activate.
+- **vercel.json**: `Cache-Control: must-revalidate` para `/data/*` y `/sw.js`
+  (los assets con hash ya vienen inmutables por defecto en Vercel).
+- **Ícono PWA en SVG**: Chrome/Android moderno lo soporta; cuando marketing
+  entregue logos definitivos conviene sumar PNG 192/512 + apple-touch-icon
+  (iOS no toma SVG). Anotado en el README.
+
 ## Branding
 
 - **Un solo archivo**: `src/config/branding.ts` (nombre, tagline, logos,

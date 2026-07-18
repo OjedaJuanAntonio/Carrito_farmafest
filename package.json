@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "preview": "serve out",
+    "postbuild": "tsx scripts/generate-sw.ts",
+    "preview": "http-server out -p 4173 -c-1",
     "lint": "eslint .",
     "test": "vitest run",
     "ingest": "tsx scripts/ingest.ts",
@@ -28,7 +29,7 @@
     "eslint": "^9",
     "eslint-config-next": "^15.3.3",
     "exceljs": "^4.4.0",
-    "serve": "^14.2.4",
+    "http-server": "^14.1.1",
     "tailwindcss": "^4.1.7",
     "tsx": "^4.19.4",
     "typescript": "^5",
