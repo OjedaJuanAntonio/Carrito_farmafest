@@ -1,0 +1,20 @@
+services:
+  # Desarrollo con hot reload: docker compose up dev
+  dev:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm install --no-audit --no-fund && npm run dev -- -H 0.0.0.0"
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - node_modules_dev:/app/node_modules
+
+  # Build de producción servido por nginx: docker compose up --build web
+  web:
+    build: .
+    ports:
+      - "8080:80"
+
+volumes:
+  node_modules_dev:

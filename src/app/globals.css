@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/*
+ * Los valores reales de los colores viven en src/config/branding.ts
+ * y se inyectan como CSS custom properties en el <html> (ver layout.tsx).
+ * Acá solo se mapean a tokens de Tailwind.
+ */
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-border-c: var(--border-c);
+  --color-danger: var(--danger);
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+}
+
+html {
+  /* Evita saltos de layout con scrollbars en desktop; en mobile no afecta */
+  scrollbar-gutter: stable;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* En un predio con sol se agradece el contraste */
+  text-rendering: optimizeLegibility;
+}
+
+/* Tap targets cómodos en mobile */
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}

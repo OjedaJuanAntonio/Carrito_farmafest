@@ -1,0 +1,19 @@
+# deps
+/node_modules
+
+# next.js
+/.next/
+/out/
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+.env*
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# reportes de ingesta (se regeneran)
+/reports/
