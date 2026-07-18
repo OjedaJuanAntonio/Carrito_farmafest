@@ -127,6 +127,25 @@ Formato: contexto → decisión → por qué.
   Cambiar la paleta de marketing = editar ese único archivo.
 - Tema inicial neutro: verde farmacia desaturado + acento ámbar.
 
+## Performance y pulido (M5)
+
+- **El directorio de stands va en el HTML estático** (SSG desde
+  `stands.json` en build) y se refresca best-effort en runtime: LCP inmediato
+  sin esperar hidratación + fetch.
+- **El índice de búsqueda (~630 KB) se baja fuera de la ruta crítica**: al
+  primer foco en el buscador o tras 2,5 s de reposo, lo que ocurra primero.
+- **SW y priming diferidos** (4 s / 12 s tras load): en 4G mala el precache
+  de ~3 MB no compite con el primer render.
+- **Lighthouse mobile (build de producción)**: performance 97 (método
+  simulado por defecto; 98 con throttling devtools), accesibilidad 100,
+  best practices 100, CLS 0. Ojo al medir en headless: sin `--disable-gpu`
+  la init de GPU infla el primer paint y el modelo Lantern encadena mal el
+  LCP (dio 83 espurio).
+- **Banner "sin conexión"** (navigator.onLine) para avisar que se ven los
+  últimos precios guardados.
+- Tests: 50 en verde, incluyendo un E2E real de la ingesta (CLI completo
+  contra Excel con filas rotas generado con exceljs en un dir temporal).
+
 ## Docker
 
 - `docker compose up dev` → desarrollo con hot reload (node 24 alpine).

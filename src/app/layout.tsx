@@ -4,6 +4,7 @@ import { branding, brandingCssVars } from "@/config/branding";
 import { Header } from "@/components/Header";
 import { SwRegister } from "@/components/SwRegister";
 import { DataPrefetcher } from "@/components/DataPrefetcher";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 export const metadata: Metadata = {
   title: {
@@ -27,6 +28,7 @@ export default function RootLayout({
     <html lang="es-AR" style={brandingCssVars()}>
       <body className="min-h-dvh flex flex-col">
         <Header />
+        <OfflineBanner />
         <main className="flex-1 w-full max-w-lg mx-auto px-3 pb-24">
           {children}
         </main>

@@ -4,9 +4,9 @@ import { useEffect } from "react";
 import { fetchManifest, fetchStands } from "@/lib/data";
 
 /**
- * "Priming" de datos para offline: unos segundos después de cargar, baja
- * todos los JSON de datos (índice + 60 stands) para que el service worker
- * los deje cacheados. Así el catálogo COMPLETO queda disponible sin señal
+ * "Priming" de datos para offline: ~12 s después de cargar (cuando el SW ya
+ * está instalado y la página quieta), baja todos los JSON de datos
+ * (índice + 60 stands) para que el service worker los deje cacheados. Así el catálogo COMPLETO queda disponible sin señal
  * aunque el usuario no haya visitado cada stand.
  *
  * Se repite solo cuando cambia la versión de datos (marcador en localStorage).
@@ -46,7 +46,7 @@ export function DataPrefetcher() {
       } catch {
         // sin conexión: se reintenta en la próxima visita
       }
-    }, 3500);
+    }, 12000);
 
     return () => {
       cancelled = true;

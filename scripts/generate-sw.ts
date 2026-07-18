@@ -10,7 +10,7 @@
  *    (offline o señal mala muestran los últimos datos conocidos)
  */
 import { createHash } from "crypto";
-import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from "fs";
+import { readdirSync, statSync, writeFileSync, existsSync } from "fs";
 import path from "path";
 
 const OUT = path.join(process.cwd(), "out");
