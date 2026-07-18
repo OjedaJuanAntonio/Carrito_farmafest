@@ -60,6 +60,33 @@ Formato: contexto → decisión → por qué.
   si no viene, no aparece nada. Sin stock NO bloquea agregar al carrito
   (el dato puede estar desactualizado; la caja del stand decide).
 
+## Carrito y checkout (M3)
+
+- **Carrito en localStorage** (`farmafest.cart.v1`), estado compartido entre
+  vistas con `useSyncExternalStore` y entre pestañas con el evento `storage`.
+  Lógica pura en `src/lib/cart.ts` (testeable sin browser).
+- **Checkout POR STAND**: el carrito se agrupa por stand y cada grupo tiene su
+  botón de caja (`/caja/[standId]`), porque cada stand cobra en su propia caja.
+- **Sin stock NO bloquea el agregado**: el dato de stock puede venir viejo del
+  Excel; la caja del stand es la fuente de verdad al cobrar.
+- **Precios del carrito se refrescan** al abrir /carrito con el catálogo
+  actual (pueden cambiar durante el evento). Si un producto ya no está en el
+  catálogo, se conserva tal cual (el POS decide).
+- **Estrategia de checkout configurable en UN punto**:
+  `src/lib/checkout/config.ts` (`CHECKOUT_VARIANT`). Tres variantes detrás de
+  la interfaz `CheckoutStrategy`:
+  - `pantalla`: lista legible (qty, descripción, código en mono grande, total);
+  - `qr-codigos`: QR de texto plano, un renglón `código;cantidad` por producto;
+  - `qr-compacto`: QR `FF1|stand|totalCents|codigo:qty,...` — encoder y parser
+    de referencia aislados en `compact-encoder.ts` para cuando se defina
+    POSBerry.
+  Las variantes con QR muestran SIEMPRE la lista legible como respaldo.
+  Para demos/pruebas: `?variante=` en la URL de caja overridea la config.
+- **QR client-side** con la lib `qrcode` (canvas): funciona offline; corrección
+  de errores M; si el payload no entra en el QR se degrada a la lista.
+- **"Ya pasé por la caja"** vacía solo los ítems de ese stand, con
+  confirmación inline (sin `window.confirm`, que se ve pobre en mobile).
+
 ## Branding
 
 - **Un solo archivo**: `src/config/branding.ts` (nombre, tagline, logos,

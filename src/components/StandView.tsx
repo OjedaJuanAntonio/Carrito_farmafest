@@ -2,9 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { StandData } from "@/lib/types";
-import { fetchStandData } from "@/lib/data";
+import Link from "next/link";
+import { fetchStandData, formatPrice } from "@/lib/data";
 import { normalizeText } from "@/lib/search";
+import { groupByStand } from "@/lib/cart";
+import { useCart } from "@/lib/cart-store";
 import { ProductCard } from "./ProductCard";
+import { AddToCartButton } from "./AddToCartButton";
 
 type State =
   | { status: "loading" }
@@ -26,6 +30,11 @@ export function StandView({
   const [state, setState] = useState<State>({ status: "loading" });
   const [query, setQuery] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const cart = useCart();
+  const standGroup = useMemo(
+    () => groupByStand(cart).find((g) => g.stand === standId),
+    [cart, standId]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -107,12 +116,27 @@ export function StandView({
             <ul className="flex flex-col gap-2 mt-1">
               {productos.map((p) => (
                 <li key={p.codigo}>
-                  <ProductCard product={p} />
+                  <ProductCard product={p} action={<AddToCartButton product={p} />} />
                 </li>
               ))}
             </ul>
           )}
         </>
+      )}
+
+      {standGroup && (
+        <div className="fixed bottom-0 inset-x-0 z-20 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none">
+          <Link
+            href="/carrito/"
+            className="pointer-events-auto max-w-lg mx-auto h-12 rounded-2xl bg-brand-dark text-white font-semibold shadow-lg flex items-center justify-between px-5"
+          >
+            <span>
+              Ver carrito · {standGroup.unidades}{" "}
+              {standGroup.unidades === 1 ? "producto" : "productos"}
+            </span>
+            <span className="font-bold">{formatPrice(standGroup.subtotal)}</span>
+          </Link>
+        </div>
       )}
     </div>
   );
