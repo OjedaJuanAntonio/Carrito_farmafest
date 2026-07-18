@@ -11,7 +11,7 @@ export function CartLink() {
   return (
     <Link
       href="/carrito/"
-      className="relative flex items-center justify-center w-11 h-11 -mr-1 rounded-xl active:bg-brand-dark"
+      className="relative flex items-center justify-center w-11 h-11 -mr-1 rounded-xl text-brand active:bg-brand-soft"
       aria-label={`Carrito, ${units} unidades`}
     >
       <svg
@@ -30,7 +30,7 @@ export function CartLink() {
         <path d="M2.5 3h2l2.4 12.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L22 7H6" />
       </svg>
       {units > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 rounded-full bg-accent text-[11px] font-bold text-ink flex items-center justify-center tabular-nums">
+        <span className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 rounded-full bg-accent text-[11px] font-bold text-white flex items-center justify-center tabular-nums">
           {units > 99 ? "99+" : units}
         </span>
       )}

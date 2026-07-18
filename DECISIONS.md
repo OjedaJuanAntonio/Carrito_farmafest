@@ -126,6 +126,48 @@ Formato: contexto → decisión → por qué.
   `<html>` y Tailwind los consume vía `@theme inline` en `globals.css`.
   Cambiar la paleta de marketing = editar ese único archivo.
 - Tema inicial neutro: verde farmacia desaturado + acento ámbar.
+  **Reemplazado después por la identidad FarmaFest real (ver abajo).**
+
+## Identidad FarmaFest real (post-v1, a pedido del cliente)
+
+Copiada del sitio oficial del evento (farmafest.com.ar, edición 2025), que
+es marca propia de la red. Decisiones:
+
+- **Assets derivados del sitio**: wordmark oficial
+  (`public/img/logo-farmafest.svg`, SVG bajado tal cual) y mark compacto
+  "fa" (`logo-f.svg` / `icon-f.svg`) extraído del wordmark midiendo los
+  bounding boxes reales de cada path (la letra f azul + la "a"
+  magenta/amarillo/naranja). Marketing puede reemplazarlos sin tocar código.
+- **Tipografía Poppins** (la del sitio) vía next/font: autohosteada, con
+  `display: "optional"` y `preload: false` — en la primera visita con 4G
+  mala pinta al toque con fuente del sistema; desde la segunda el SW la
+  sirve de cache y Poppins aparece siempre. En un predio, primer render
+  gana a fidelidad tipográfica de la primera pantalla.
+- **Contraste vs fidelidad**: el azul de marca puro (#178dff) da 3,3:1
+  sobre blanco → va solo en usos grandes/decorativos (`festival.azul`).
+  Para UI funcional: `primary` #0f6fe0 (4,8:1) y `primaryDark` #0b55b0.
+  Ídem magenta: #f3006c decorativo, #d80060 para texto chico
+  (`festival.magentaTexto`). Todo verificado con cálculo WCAG.
+- **Paleta festival** (8 colores exactos del wordmark + círculos del sitio)
+  expuesta como tokens `--fest-*`: SOLO uso decorativo (círculos flotantes,
+  chips, números de pasos). La regla está documentada en branding.ts.
+- **Header blanco con wordmark multicolor** (como el sitio); el azul
+  funcional queda para botones/links. Badge del carrito en magenta.
+- **Landing `/evento`**: hero con wordmark + círculos flotantes (firma
+  visual del sitio, `prefers-reduced-motion` los frena), fechas 2026
+  "a confirmar", stats reales de la app (60 stands / 9.000+ productos /
+  3 días), cómo funciona el carrito y FAQ. **Copy 100% original** (no se
+  copió texto del sitio 2025: cambia la edición, el rubro y los datos).
+  El buscador sigue en `/` (los QR de pasillo no cambian); la landing
+  linkea desde el header y la home.
+- **Wordmark del hero inlineado en el HTML** (`src/lib/wordmark.ts`, build
+  time): el elemento más pesado del primer render no espera ningún request.
+- **CSS crítico inline** (`experimental.optimizeCss` + critters): sin
+  stylesheet render-blocking en la primera pintura.
+- **Lighthouse mobile tras el re-theming**: home y /evento perf 94
+  (mediana de 4 corridas; Lantern oscila ±7 con LCP real de 0,4 s),
+  accesibilidad 100, best practices 100, CLS 0. Offline re-verificado
+  con la identidad nueva (fuentes y assets en el precache).
 
 ## Performance y pulido (M5)
 

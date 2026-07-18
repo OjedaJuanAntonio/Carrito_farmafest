@@ -11,12 +11,12 @@ export default function manifest(): MetadataRoute.Manifest {
     description: `Buscá productos, armá tu carrito y pasá por la caja del stand. ${branding.eventDates}.`,
     start_url: "/",
     display: "standalone",
-    background_color: branding.colors.background,
-    theme_color: branding.colors.primary,
+    background_color: branding.colors.surface,
+    theme_color: branding.colors.surface,
     lang: "es-AR",
     icons: [
       {
-        src: branding.logoLarge,
+        src: branding.logoIcon,
         sizes: "any",
         type: "image/svg+xml",
         purpose: "any",

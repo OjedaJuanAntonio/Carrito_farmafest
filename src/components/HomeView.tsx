@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { branding } from "@/config/branding";
 import { fetchSearchIndex, fetchStands, formatPrice } from "@/lib/data";
 import { prepareDocs, searchDocs, type SearchDoc } from "@/lib/search";
@@ -20,7 +19,13 @@ import type { Stand } from "@/lib/types";
  * Los QR de los pasillos apuntan acá. Muestra en qué stand está cada
  * producto y a qué precio, con link directo al stand.
  */
-export function HomeView({ initialStands }: { initialStands: Stand[] }) {
+export function HomeView({
+  initialStands,
+  wordmarkSvg,
+}: {
+  initialStands: Stand[];
+  wordmarkSvg: string;
+}) {
   const [docs, setDocs] = useState<SearchDoc[] | null>(null);
   const [stands, setStands] = useState<Stand[]>(initialStands);
   const [loadError, setLoadError] = useState(false);
@@ -79,16 +84,21 @@ export function HomeView({ initialStands }: { initialStands: Stand[] }) {
   return (
     <div className="pt-4">
       {!searching && (
-        <div className="flex flex-col items-center text-center pt-6 pb-4">
-          <Image
-            src={branding.logoLarge}
-            alt={branding.name}
-            width={88}
-            height={88}
-            priority
+        <div className="flex flex-col items-center text-center pt-8 pb-4">
+          <h1 className="sr-only">{branding.name}</h1>
+          <div
+            role="img"
+            aria-label={branding.name}
+            className="w-60"
+            dangerouslySetInnerHTML={{ __html: wordmarkSvg }}
           />
-          <h1 className="text-2xl font-bold mt-3">{branding.name}</h1>
-          <p className="text-ink-muted text-sm mt-1">{branding.tagline}</p>
+          <p className="text-ink-muted text-sm mt-3">{branding.tagline}</p>
+          <Link
+            href="/evento/"
+            className="mt-3 text-sm font-semibold text-brand-dark rounded-lg px-3 py-1.5 bg-brand-soft active:opacity-80"
+          >
+            Conocé el evento →
+          </Link>
         </div>
       )}
 

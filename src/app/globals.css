@@ -17,8 +17,20 @@
   --color-border-c: var(--border-c);
   --color-danger: var(--danger);
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  /* Paleta festival FarmaFest: solo uso decorativo (círculos, chips) */
+  --color-fest-azul: var(--fest-azul);
+  --color-fest-naranja: var(--fest-naranja);
+  --color-fest-magenta: var(--fest-magenta);
+  --color-fest-magenta-texto: var(--fest-magenta-texto);
+  --color-fest-lima: var(--fest-lima);
+  --color-fest-amarillo: var(--fest-amarillo);
+  --color-fest-rosa: var(--fest-rosa);
+  --color-fest-verde: var(--fest-verde);
+  --color-fest-celeste: var(--fest-celeste);
+
+  /* Poppins autohosteada vía next/font (variable en layout.tsx) */
+  --font-sans: var(--font-poppins), system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 html {
@@ -39,4 +51,27 @@ body {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Círculos flotantes de la landing (firma visual del sitio FarmaFest) */
+@keyframes fest-float {
+  from {
+    transform: translateY(0) translateX(0);
+  }
+  to {
+    transform: translateY(-14px) translateX(6px);
+  }
+}
+
+.fest-circle {
+  position: absolute;
+  border-radius: 9999px;
+  animation: fest-float 7s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fest-circle {
+    animation: none;
+  }
 }

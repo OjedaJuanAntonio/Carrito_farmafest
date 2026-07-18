@@ -113,8 +113,18 @@ referencia para el lado del POS).
 
 Todo en **`src/config/branding.ts`**: colores, nombre, tagline, rutas de
 logos (poner los archivos en `public/img/`). Nada más que tocar; rebuild y
-listo. Pendiente para marketing: PNG 192/512 para el ícono PWA y
-apple-touch-icon (iOS no acepta SVG); se agregan en `src/app/manifest.ts`.
+listo.
+
+La app ya usa la **identidad FarmaFest real** derivada del sitio oficial:
+wordmark en `public/img/logo-farmafest.svg`, mark compacto "fa" en
+`logo-f.svg` / `icon-f.svg`, tipografía Poppins y la paleta multicolor
+(tokens en `branding.festival`, solo uso decorativo — para texto usar
+`colors.*`, que ya pasa contraste AA). La landing del evento vive en
+**`/evento`** (`src/app/evento/page.tsx`); el buscador sigue en `/` y los
+QR de pasillo no cambian.
+
+Pendiente para marketing: PNG 192/512 para el ícono PWA y apple-touch-icon
+(iOS no acepta SVG); se agregan en `src/app/manifest.ts`.
 
 ---
 
