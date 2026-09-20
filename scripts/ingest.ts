@@ -17,7 +17,7 @@
  * válidos, 2 error de archivos/columnas.
  */
 import ExcelJS from "exceljs";
-import { mkdirSync, rmSync, writeFileSync, existsSync } from "fs";
+import { mkdirSync, rmSync, writeFileSync, existsSync, readFileSync } from "fs";
 import path from "path";
 import {
   ALIAS_PRODUCTOS,
@@ -30,19 +30,44 @@ import {
   type FilaCrudaStand,
   type Problema,
 } from "./lib/ingesta";
+import { parseCsv } from "./lib/csv";
 
 function arg(name: string, def: string): string {
   const i = process.argv.indexOf(`--${name}`);
   return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : def;
 }
 
+const esUrl = (s: string) => /^https?:\/\//i.test(s);
+const esCsv = (s: string) => /output=csv|[?&]format=csv|\.csv(\?|$)/i.test(s);
+
+/**
+ * Lee una fuente de datos que puede ser: un .xlsx local, un .csv local, o una
+ * URL (típicamente un Google Sheet "Publicado en la web → CSV"). Devuelve
+ * encabezados + filas crudas, sin interpretar tipos.
+ */
 async function leerHoja(
-  archivo: string
+  fuente: string
 ): Promise<{ headers: string[]; filas: unknown[][] }> {
+  // ---- CSV (archivo local o URL de planilla publicada) ----
+  if (esCsv(fuente) || (!esUrl(fuente) && /\.csv$/i.test(fuente))) {
+    const text = esUrl(fuente)
+      ? await descargarTexto(fuente)
+      : readFileSync(fuente, "utf8");
+    const rows = parseCsv(text);
+    const headers = (rows[0] ?? []).map((h) => String(h ?? ""));
+    return { headers, filas: rows.slice(1) };
+  }
+
+  // ---- xlsx (archivo local o URL que devuelve xlsx) ----
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile(archivo);
+  if (esUrl(fuente)) {
+    const buf = await descargarBuffer(fuente);
+    await wb.xlsx.load(buf);
+  } else {
+    await wb.xlsx.readFile(fuente);
+  }
   const ws = wb.worksheets[0];
-  if (!ws) throw new Error(`${archivo} no tiene hojas`);
+  if (!ws) throw new Error(`${fuente} no tiene hojas`);
   const filas: unknown[][] = [];
   let headers: string[] = [];
   ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
@@ -57,16 +82,37 @@ async function leerHoja(
   return { headers, filas };
 }
 
+async function descargarTexto(url: string): Promise<string> {
+  const res = await fetch(url, { redirect: "follow" });
+  if (!res.ok) throw new Error(`No se pudo descargar ${url} (HTTP ${res.status})`);
+  return res.text();
+}
+
+async function descargarBuffer(url: string): Promise<Buffer> {
+  const res = await fetch(url, { redirect: "follow" });
+  if (!res.ok) throw new Error(`No se pudo descargar ${url} (HTTP ${res.status})`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
 async function main() {
-  const productosPath = arg("productos", path.join("data-src", "productos.xlsx"));
-  const standsPath = arg("stands", path.join("data-src", "stands.xlsx"));
+  // Fuentes: flag CLI > variable de entorno > archivo local por defecto.
+  // Las variables SHEET_*_URL permiten apuntar a un Google Sheet publicado
+  // como CSV (usado por el Action de publicación); no hay que tocar código.
+  const productosPath = arg(
+    "productos",
+    process.env.SHEET_PRODUCTOS_URL || path.join("data-src", "productos.xlsx")
+  );
+  const standsPath = arg(
+    "stands",
+    process.env.SHEET_STANDS_URL || path.join("data-src", "stands.xlsx")
+  );
   const outDir = arg("out", path.join("public", "data"));
 
   for (const p of [productosPath, standsPath]) {
-    if (!existsSync(p)) {
+    if (!esUrl(p) && !existsSync(p)) {
       console.error(`✖ No existe el archivo ${p}`);
       console.error(
-        "  Tip: corré `npm run sample-data` para generar datos de ejemplo."
+        "  Tip: corré `npm run sample-data` para generar datos de ejemplo, o pasá una URL de planilla publicada."
       );
       process.exit(2);
     }

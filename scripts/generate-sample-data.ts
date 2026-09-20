@@ -7,8 +7,9 @@
  * Uso: npm run sample-data
  */
 import ExcelJS from "exceljs";
-import { mkdirSync } from "fs";
+import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
+import { toCsv } from "./lib/csv";
 
 // ---------- PRNG determinístico (mulberry32) ----------
 function mulberry32(seed: number) {
@@ -327,7 +328,7 @@ async function main() {
   const productos = generarProductos();
   const wbProd = new ExcelJS.Workbook();
   const wsProd = wbProd.addWorksheet("Productos");
-  wsProd.addRow([
+  const headerProd = [
     "Código de barras",
     "Descripción",
     "Precio",
@@ -336,25 +337,36 @@ async function main() {
     "Stand",
     "Foto",
     "Stock",
+  ];
+  const filasProd = productos.map((p) => [
+    p.codigo,
+    p.descripcion,
+    p.precio,
+    p.precioAnterior ?? "",
+    p.oferta ?? "",
+    p.stand,
+    p.foto ?? "",
+    p.stock ?? "",
   ]);
-  for (const p of productos) {
-    wsProd.addRow([
-      p.codigo,
-      p.descripcion,
-      p.precio,
-      p.precioAnterior ?? "",
-      p.oferta ?? "",
-      p.stand,
-      p.foto ?? "",
-      p.stock ?? "",
-    ]);
-  }
+  wsProd.addRow(headerProd);
+  for (const f of filasProd) wsProd.addRow(f);
   await wbProd.xlsx.writeFile(path.join(outDir, "productos.xlsx"));
 
+  // ---- Espejo en CSV (mismo formato que exporta Google Sheets) ----
+  // Sirve para probar el flujo de planilla sin una hoja real y como plantilla.
+  writeFileSync(
+    path.join(outDir, "stands.csv"),
+    toCsv([["Stand", "Proveedor"], ...PROVEEDORES.map((p, i) => [i + 1, p])])
+  );
+  writeFileSync(
+    path.join(outDir, "productos.csv"),
+    toCsv([headerProd, ...filasProd])
+  );
+
   const enOferta = productos.filter((p) => p.precioAnterior || p.oferta).length;
-  console.log(`✔ data-src/stands.xlsx    → ${PROVEEDORES.length} stands`);
+  console.log(`✔ data-src/stands.xlsx + .csv    → ${PROVEEDORES.length} stands`);
   console.log(
-    `✔ data-src/productos.xlsx → ${productos.length} productos (${enOferta} en oferta)`
+    `✔ data-src/productos.xlsx + .csv → ${productos.length} productos (${enOferta} en oferta)`
   );
 }
 
