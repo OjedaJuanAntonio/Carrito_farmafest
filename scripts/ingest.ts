@@ -17,7 +17,14 @@
  * válidos, 2 error de archivos/columnas.
  */
 import ExcelJS from "exceljs";
-import { mkdirSync, rmSync, writeFileSync, existsSync, readFileSync } from "fs";
+import {
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+  existsSync,
+  readFileSync,
+  readdirSync,
+} from "fs";
 import path from "path";
 import {
   ALIAS_PRODUCTOS,
@@ -39,6 +46,52 @@ function arg(name: string, def: string): string {
 
 const esUrl = (s: string) => /^https?:\/\//i.test(s);
 const esCsv = (s: string) => /output=csv|[?&]format=csv|\.csv(\?|$)/i.test(s);
+
+const EXT_FOTO = new Set([
+  ".webp",
+  ".avif",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".svg",
+]);
+
+/**
+ * Arma un resolver de fotos por código de barras escaneando un directorio
+ * local (por defecto public/img/productos). Cada archivo <codigo>.<ext> se
+ * mapea a su ruta pública. Sin celda Foto, el producto toma su imagen de acá.
+ * Devuelve undefined si no hay carpeta o no hay imágenes.
+ */
+function construirResolverFotos():
+  | ((codigo: string) => string | undefined)
+  | undefined {
+  const dir = process.env.PHOTOS_DIR || path.join("public", "img", "productos");
+  if (!existsSync(dir)) return undefined;
+
+  const rel = path.relative("public", dir).split(path.sep).join("/");
+  if (rel.startsWith("..")) {
+    console.warn(
+      `⚠ PHOTOS_DIR (${dir}) está fuera de public/; no se puede servir. Se ignora.`
+    );
+    return undefined;
+  }
+  const publicBase = "/" + rel;
+
+  const porCodigo = new Map<string, string>();
+  for (const name of readdirSync(dir)) {
+    const ext = path.extname(name).toLowerCase();
+    if (!EXT_FOTO.has(ext)) continue;
+    const codigo = path.basename(name, path.extname(name));
+    if (!/^\d{6,14}$/.test(codigo)) continue;
+    if (!porCodigo.has(codigo)) porCodigo.set(codigo, `${publicBase}/${name}`);
+  }
+  if (porCodigo.size === 0) return undefined;
+  console.log(
+    `✔ Fotos por código de barras: ${porCodigo.size} imágenes en ${dir}`
+  );
+  return (codigo) => porCodigo.get(codigo);
+}
 
 /**
  * Lee una fuente de datos que puede ser: un .xlsx local, un .csv local, o una
@@ -157,6 +210,7 @@ async function main() {
   }));
   const resultado = procesarProductos(filasProd, stands, {
     imageBase: process.env.IMAGE_BASE_URL,
+    fotoPorCodigo: construirResolverFotos(),
   });
 
   // ---------- Reporte ----------

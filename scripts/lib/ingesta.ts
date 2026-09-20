@@ -34,6 +34,12 @@ export interface OpcionesProductos {
    * Ej: base "https://cdn.farmafest/img/" + celda "ibu.jpg" → URL completa.
    */
   imageBase?: string;
+  /**
+   * Resolución de foto por código de barras: si la celda Foto está vacía, se
+   * consulta acá con el código. Devuelve la URL/ruta de la imagen o undefined.
+   * Lo arma la ingesta escaneando public/img/productos/<codigo>.<ext>.
+   */
+  fotoPorCodigo?: (codigo: string) => string | undefined;
 }
 
 export interface FilaCrudaStand {
@@ -249,6 +255,7 @@ export function procesarProductos(
 
     const foto = celdaTexto(f.foto);
     if (foto) {
+      // La celda Foto (si viene) siempre gana: permite excepciones y URLs.
       if (/^(https?:\/\/|\/)[^\s]+$/i.test(foto)) {
         producto.foto = foto;
       } else if (imageBase && !/\s/.test(foto)) {
@@ -263,6 +270,10 @@ export function procesarProductos(
           contexto: descripcion,
         });
       }
+    } else if (opciones.fotoPorCodigo) {
+      // Sin celda Foto: se busca la imagen nombrada con el código de barras.
+      const auto = opciones.fotoPorCodigo(codigo);
+      if (auto) producto.foto = auto;
     }
 
     // Precio anterior (para mostrar el ahorro): solo si es mayor al vigente.

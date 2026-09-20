@@ -25,6 +25,22 @@ plano) y poder cambiar precios/ofertas sin depender de un desarrollador.
 - **Badge**: `#d80060` (magenta apto para texto, AA con blanco) sobre la foto
   y al lado del título en resultados.
 
+### Fotos vinculadas por código de barras
+- **La foto se resuelve por código de barras, no por la columna Foto**: se
+  nombra el archivo con el código (`7791000000017.jpg`) y se deja en
+  `public/img/productos/`; la ingesta escanea esa carpeta y linkea cada
+  producto con su archivo. El operador no llena ninguna columna. La columna
+  Foto (si viene) sigue teniendo prioridad, para excepciones o URLs externas.
+  Motivo: el código es único y estable; la descripción tiene acentos, espacios
+  y se repite. Extensiones: webp/avif/jpg/jpeg/png/gif/svg.
+- **Fotos NO se precachean** (podrían ser miles): el SW las cachea en runtime
+  cache-first (`farmafest-fotos-v1`) a medida que se ven → quedan offline las
+  vistas, sin inflar el install del service worker. Los productos sin archivo
+  muestran el placeholder (onError), sin romper nada.
+- **Repo-hosted por defecto** (offline-friendly, sin servicio extra). Para R2:
+  usar la columna Foto con `IMAGE_BASE_URL`, o pedir el cacheo offline del
+  dominio del bucket. `PHOTOS_DIR` permite mover la carpeta.
+
 ### Publicación desde Google Sheets (Milestones B–C)
 - **La ingesta lee CSV además de xlsx**: `.csv` local o URL de planilla
   publicada (`output=csv`). Mismo hash de versión que xlsx → camino

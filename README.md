@@ -89,8 +89,9 @@ Reglas de la ingesta (iguales para Excel, CSV o planilla):
 - **Oferta**: etiqueta libre; con baja de precio el badge muestra el `-X%`.
 - Stand inexistente → fila afuera.
 - Foto y Stock **opcionales**: sin foto, placeholder; sin stock, no se muestra.
-  Nunca bloquean un flujo. La foto puede ser URL completa o nombre de archivo
-  suelto + `IMAGE_BASE_URL` (ver apps-script/README.md → Imágenes).
+  Nunca bloquean un flujo. **La foto se vincula por código de barras**: se
+  nombra el archivo `<código>.jpg` y se deja en `public/img/productos/`, sin
+  llenar la columna Foto (ver apps-script/README.md → Imágenes).
 
 > **Alta/baja de stands** cambia las rutas estáticas: eso sí requiere `git
 > push` con rebuild (CF Pages) — no es un cambio "en caliente". Los precios y

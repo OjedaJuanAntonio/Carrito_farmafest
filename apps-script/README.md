@@ -91,18 +91,28 @@ propiedades del script.
 
 ## Imágenes
 
-Tres opciones para la columna **Foto**:
+**Recomendado: nombrá cada foto con el código de barras** y no toques la
+planilla. Poné los archivos en `public/img/productos/`:
 
-1. **URL completa** (`https://…/ibu.jpg`): se usa tal cual.
-2. **Nombre de archivo** (`ibu.jpg`) + `IMAGE_BASE_URL` configurada: se arma
-   `IMAGE_BASE_URL/ibu.jpg`. Mantiene la planilla limpia.
-3. **Sin foto**: se muestra un placeholder digno (ningún flujo depende de la
-   imagen).
+```
+7791000000017.jpg
+7790123456789.webp
+```
 
-**Dónde alojar las fotos**: lo recomendado es un bucket **Cloudflare R2**
-(mismo proveedor que el hosting, sin costo de egreso) y poner su URL pública
-como `IMAGE_BASE_URL`. También sirve cualquier hosting de imágenes que permita
-hotlinking. (Google Drive **no** es confiable para esto: bloquea el hotlink).
+La app vincula sola cada producto con `<su-código>.<ext>`; los que no tienen
+archivo muestran un placeholder digno (ningún flujo depende de la imagen). Las
+fotos quedan **offline** una vez vistas. Extensiones: webp/avif/jpg/jpeg/png/
+gif/svg (mejor **.webp** o `.jpg`). Detalle en
+[`public/img/productos/README.md`](../public/img/productos/README.md).
+
+La columna **Foto** de la planilla es opcional y **solo para excepciones**: si
+la completás, tiene prioridad. Acepta una URL completa (`https://…/x.jpg`) o un
+nombre de archivo + `IMAGE_BASE_URL`.
+
+> **Dónde alojar**: por defecto en el repo (offline, sin servicios). Para
+> gestionarlas aparte sin tocar el repo, un bucket **Cloudflare R2** público y
+> `IMAGE_BASE_URL` con la columna Foto. **No uses Google Drive**: bloquea el
+> hotlink.
 
 ## Sin planilla (respaldo)
 

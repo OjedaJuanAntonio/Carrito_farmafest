@@ -38,12 +38,15 @@ function main() {
     .map((f) => "/" + path.relative(OUT, f).split(path.sep).join("/"))
     // Excluidos del precache:
     //  - /data/*  → network-first en runtime (precios que cambian)
+    //  - /img/productos/* → pueden ser miles de fotos; se cachean en runtime
+    //    (cache-first) a medida que se ven, no todas de una al instalar.
     //  - /sw.js   → nunca cachear el propio SW
     //  - /_headers /_redirects → Cloudflare Pages los consume en el build y NO
     //    los sirve; si se precachearan, cache.addAll fallaría (404) en CF.
     .filter(
       (url) =>
         !url.startsWith("/data/") &&
+        !url.startsWith("/img/productos/") &&
         url !== "/sw.js" &&
         url !== "/_headers" &&
         url !== "/_redirects"
@@ -75,6 +78,7 @@ function main() {
   const sw = `/* Generado por scripts/generate-sw.ts — NO editar a mano */
 const STATIC_CACHE = "farmafest-static-${version}";
 const DATA_CACHE = "farmafest-data-v1";
+const PHOTO_CACHE = "farmafest-fotos-v1";
 const PRECACHE_URLS = ${JSON.stringify(all)};
 
 self.addEventListener("install", (event) => {
@@ -109,6 +113,21 @@ function normalizePath(pathname) {
   return pathname;
 }
 
+/** cache-first para fotos de producto: quedan offline las que ya se vieron. */
+async function photoFetch(request) {
+  const cache = await caches.open(PHOTO_CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  try {
+    const res = await fetch(request);
+    if (res.ok) cache.put(request, res.clone());
+    return res;
+  } catch (err) {
+    // Sin señal y sin cache: la app muestra el placeholder (onError).
+    return Response.error();
+  }
+}
+
 /** network-first con timeout: señal mala → cache en ~3,5 s */
 async function dataFetch(request) {
   const cache = await caches.open(DATA_CACHE);
@@ -133,6 +152,11 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith("/data/")) {
     event.respondWith(dataFetch(event.request));
+    return;
+  }
+
+  if (url.pathname.startsWith("/img/productos/")) {
+    event.respondWith(photoFetch(event.request));
     return;
   }
 

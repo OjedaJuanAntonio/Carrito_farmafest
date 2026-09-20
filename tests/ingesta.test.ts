@@ -186,6 +186,25 @@ describe("procesarProductos", () => {
     const r = procesarProductos([fila({ precio: "$ 12.345,50" })], STANDS);
     expect(r.productos[0].precio).toBe(12345.5);
   });
+
+  it("resuelve la foto por código de barras cuando la celda Foto está vacía", () => {
+    const resolver = (codigo: string) =>
+      codigo === "7791234567898" ? `/img/productos/${codigo}.webp` : undefined;
+    const r = procesarProductos([fila({ foto: "" })], STANDS, {
+      fotoPorCodigo: resolver,
+    });
+    expect(r.productos[0].foto).toBe("/img/productos/7791234567898.webp");
+  });
+
+  it("la celda Foto explícita tiene prioridad sobre la resolución por código", () => {
+    const resolver = () => "/img/productos/porcodigo.webp";
+    const r = procesarProductos(
+      [fila({ foto: "/img/explicita.jpg" })],
+      STANDS,
+      { fotoPorCodigo: resolver }
+    );
+    expect(r.productos[0].foto).toBe("/img/explicita.jpg");
+  });
 });
 
 describe("generarSalidas", () => {
