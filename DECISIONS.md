@@ -3,6 +3,28 @@
 Registro de decisiones tomadas de forma autónoma durante el desarrollo.
 Formato: contexto → decisión → por qué.
 
+## Ofertas y datos desde Google Sheets (post-branding, 2026-09)
+
+Contexto: la gerencia quiere ver **precios y fotos** (el carrito pasa a segundo
+plano) y poder cambiar precios/ofertas sin depender de un desarrollador.
+
+### Modelo de ofertas (Milestone A)
+- **`Product` suma `precioAnterior?` y `oferta?`** (ambos opcionales, fieles al
+  principio "todo se ve bien con o sin el dato"). `precioAnterior` solo se
+  guarda si es **mayor** que el precio vigente; si no, se descarta con
+  advertencia (evita "descuentos" negativos por error de tipeo).
+- **Prioridad del badge**: si hay baja de precio se muestra el **`-X%`
+  calculado** (concreto y vendedor); la etiqueta de texto (`2x1`, `Combo`,
+  `Lanzamiento`) queda para mecánicas **sin** baja de precio. Lógica pura en
+  `src/lib/offers.ts` (testeada).
+- **Índice de búsqueda de largo variable**: las filas en oferta pasan a 6
+  elementos `[codigo, desc, precio, stand, precioAnterior, oferta]`; el resto
+  quedan en 4. Así el badge y el precio tachado aparecen también en la
+  búsqueda global sin inflar el índice entero (~22% en oferta en los datos de
+  ejemplo → el resto sigue liviano).
+- **Badge**: `#d80060` (magenta apto para texto, AA con blanco) sobre la foto
+  y al lado del título en resultados.
+
 ## Stack y arquitectura
 
 - **Scaffold manual en vez de create-next-app**: control total de versiones y

@@ -13,6 +13,7 @@ import { branding } from "@/config/branding";
 import { fetchSearchIndex, fetchStands, formatPrice } from "@/lib/data";
 import { prepareDocs, searchDocs, type SearchDoc } from "@/lib/search";
 import type { Stand } from "@/lib/types";
+import { OfferBadge } from "./OfferBadge";
 
 /**
  * Home: buscador global sobre todos los productos del evento.
@@ -196,16 +197,26 @@ function SearchResultCard({
       className="flex items-center gap-3 rounded-xl bg-surface border border-border-c p-3 shadow-sm active:bg-brand-soft"
     >
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium leading-snug line-clamp-2">
-          {doc.descripcion}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium leading-snug line-clamp-2 min-w-0">
+            {doc.descripcion}
+          </p>
+          <OfferBadge product={doc} className="shrink-0" />
+        </div>
         <p className="text-[11px] text-brand font-semibold mt-1">
           Stand {doc.stand} · {proveedor}
         </p>
       </div>
-      <p className="text-base font-bold text-brand-dark whitespace-nowrap">
-        {formatPrice(doc.precio)}
-      </p>
+      <div className="text-right whitespace-nowrap">
+        {doc.precioAnterior !== undefined && (
+          <p className="text-[11px] text-ink-muted line-through leading-none">
+            {formatPrice(doc.precioAnterior)}
+          </p>
+        )}
+        <p className="text-base font-bold text-brand-dark leading-none mt-0.5">
+          {formatPrice(doc.precio)}
+        </p>
+      </div>
     </Link>
   );
 }

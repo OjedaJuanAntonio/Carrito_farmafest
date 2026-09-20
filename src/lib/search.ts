@@ -25,17 +25,29 @@ export interface SearchDoc {
   stand: number;
   /** descripción normalizada, precomputada una sola vez */
   norm: string;
+  /** precio anterior (solo filas en oferta del índice) */
+  precioAnterior?: number;
+  /** etiqueta de oferta (solo filas en oferta del índice) */
+  oferta?: string;
 }
 
 /** Prepara los documentos a partir del índice compacto descargado. */
 export function prepareDocs(entries: IndexEntry[]): SearchDoc[] {
-  return entries.map(([codigo, descripcion, precio, stand]) => ({
-    codigo,
-    descripcion,
-    precio,
-    stand,
-    norm: normalizeText(descripcion),
-  }));
+  return entries.map((entry) => {
+    const [codigo, descripcion, precio, stand] = entry;
+    const doc: SearchDoc = {
+      codigo,
+      descripcion,
+      precio,
+      stand,
+      norm: normalizeText(descripcion),
+    };
+    if (entry.length === 6) {
+      if (entry[4] > 0) doc.precioAnterior = entry[4];
+      if (entry[5]) doc.oferta = entry[5];
+    }
+    return doc;
+  });
 }
 
 /**

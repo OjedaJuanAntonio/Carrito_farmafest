@@ -99,16 +99,22 @@ async function main() {
     console.error(`  Encabezados encontrados: ${hojaProd.headers.join(" | ")}`);
     process.exit(2);
   }
+  const col = (nombre: string, v: unknown[]) =>
+    colProd.mapa.has(nombre) ? v[colProd.mapa.get(nombre)!] : undefined;
   const filasProd: FilaCruda[] = hojaProd.filas.map((v, i) => ({
     fila: i + 2,
     codigo: v[colProd.mapa.get("codigo")!],
     descripcion: v[colProd.mapa.get("descripcion")!],
     precio: v[colProd.mapa.get("precio")!],
     stand: v[colProd.mapa.get("stand")!],
-    foto: colProd.mapa.has("foto") ? v[colProd.mapa.get("foto")!] : undefined,
-    stock: colProd.mapa.has("stock") ? v[colProd.mapa.get("stock")!] : undefined,
+    foto: col("foto", v),
+    stock: col("stock", v),
+    precioAnterior: col("precioAnterior", v),
+    oferta: col("oferta", v),
   }));
-  const resultado = procesarProductos(filasProd, stands);
+  const resultado = procesarProductos(filasProd, stands, {
+    imageBase: process.env.IMAGE_BASE_URL,
+  });
 
   // ---------- Reporte ----------
   const lineas: string[] = [];

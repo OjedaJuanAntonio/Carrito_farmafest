@@ -252,7 +252,12 @@ interface FilaProducto {
   stand: number;
   foto?: string;
   stock?: number;
+  precioAnterior?: number;
+  oferta?: string;
 }
+
+// Etiquetas de oferta sin descuento de precio (el ahorro está en la mecánica).
+const OFERTAS_ETIQUETA = ["2x1", "3x2", "Combo", "Lanzamiento"] as const;
 
 function generarProductos(): FilaProducto[] {
   const filas: FilaProducto[] = [];
@@ -288,6 +293,17 @@ function generarProductos(): FilaProducto[] {
       };
       if (rnd() < 0.12) fila.foto = `/img/demo/prod-${randInt(1, 8)}.svg`;
       if (rnd() < 0.5) fila.stock = rnd() < 0.06 ? 0 : randInt(1, 250);
+
+      // ~22% en oferta: la mayoría con descuento de precio (precio anterior),
+      // algunas con etiqueta de mecánica (2x1/combo) sin bajar el precio.
+      const dado = rnd();
+      if (dado < 0.16) {
+        const pct = pick([10, 15, 20, 25, 30, 35, 40, 50]);
+        fila.precioAnterior = Math.round((fila.precio / (1 - pct / 100)) / 50) * 50;
+        if (rnd() < 0.25) fila.oferta = "Oferta"; // etiqueta explícita + %
+      } else if (dado < 0.22) {
+        fila.oferta = pick(OFERTAS_ETIQUETA);
+      }
       filas.push(fila);
     }
   });
@@ -315,6 +331,8 @@ async function main() {
     "Código de barras",
     "Descripción",
     "Precio",
+    "Precio anterior",
+    "Oferta",
     "Stand",
     "Foto",
     "Stock",
@@ -324,6 +342,8 @@ async function main() {
       p.codigo,
       p.descripcion,
       p.precio,
+      p.precioAnterior ?? "",
+      p.oferta ?? "",
       p.stand,
       p.foto ?? "",
       p.stock ?? "",
@@ -331,8 +351,11 @@ async function main() {
   }
   await wbProd.xlsx.writeFile(path.join(outDir, "productos.xlsx"));
 
+  const enOferta = productos.filter((p) => p.precioAnterior || p.oferta).length;
   console.log(`✔ data-src/stands.xlsx    → ${PROVEEDORES.length} stands`);
-  console.log(`✔ data-src/productos.xlsx → ${productos.length} productos`);
+  console.log(
+    `✔ data-src/productos.xlsx → ${productos.length} productos (${enOferta} en oferta)`
+  );
 }
 
 main().catch((err) => {

@@ -13,7 +13,7 @@ import type {
 
 // ---------- Tipos de entrada/salida ----------
 
-/** Celdas crudas de una fila de productos, tal como salen del Excel. */
+/** Celdas crudas de una fila de productos, tal como salen del Excel/planilla. */
 export interface FilaCruda {
   /** Número de fila en el Excel (para reportar errores) */
   fila: number;
@@ -23,6 +23,17 @@ export interface FilaCruda {
   stand?: unknown;
   foto?: unknown;
   stock?: unknown;
+  precioAnterior?: unknown;
+  oferta?: unknown;
+}
+
+/** Config opcional del procesamiento de productos. */
+export interface OpcionesProductos {
+  /**
+   * Base para fotos que vengan como nombre de archivo suelto (sin http ni "/").
+   * Ej: base "https://cdn.farmafest/img/" + celda "ibu.jpg" → URL completa.
+   */
+  imageBase?: string;
 }
 
 export interface FilaCrudaStand {
@@ -155,9 +166,11 @@ export function procesarStands(filas: FilaCrudaStand[]): {
 
 export function procesarProductos(
   filas: FilaCruda[],
-  stands: Stand[]
+  stands: Stand[],
+  opciones: OpcionesProductos = {}
 ): ResultadoIngesta {
   const standIds = new Set(stands.map((s) => s.id));
+  const imageBase = (opciones.imageBase ?? "").trim().replace(/\/+$/, "");
   const productos: Product[] = [];
   const errores: Problema[] = [];
   const advertencias: Problema[] = [];
@@ -238,13 +251,44 @@ export function procesarProductos(
     if (foto) {
       if (/^(https?:\/\/|\/)[^\s]+$/i.test(foto)) {
         producto.foto = foto;
+      } else if (imageBase && !/\s/.test(foto)) {
+        // nombre de archivo suelto (ej "ibu.jpg") + base configurada
+        producto.foto = `${imageBase}/${foto.replace(/^\/+/, "")}`;
       } else {
         advertencias.push({
           fila: f.fila,
-          motivo: `foto «${foto}» no parece una URL válida; se ignora`,
+          motivo: imageBase
+            ? `foto «${foto}» inválida (ni URL ni nombre de archivo); se ignora`
+            : `foto «${foto}» no parece una URL válida; se ignora`,
           contexto: descripcion,
         });
       }
+    }
+
+    // Precio anterior (para mostrar el ahorro): solo si es mayor al vigente.
+    if (celdaTexto(f.precioAnterior) !== "") {
+      const anterior = parsearPrecio(f.precioAnterior);
+      if (!Number.isFinite(anterior) || anterior <= 0) {
+        advertencias.push({
+          fila: f.fila,
+          motivo: `precio anterior «${celdaTexto(f.precioAnterior)}» inválido; se ignora`,
+          contexto: descripcion,
+        });
+      } else if (anterior <= producto.precio) {
+        advertencias.push({
+          fila: f.fila,
+          motivo: `precio anterior (${anterior}) no es mayor al precio (${producto.precio}); se ignora`,
+          contexto: descripcion,
+        });
+      } else {
+        producto.precioAnterior = Math.round(anterior * 100) / 100;
+      }
+    }
+
+    // Etiqueta de oferta libre ("2x1", "Combo", "Lanzamiento"…).
+    const oferta = celdaTexto(f.oferta);
+    if (oferta) {
+      producto.oferta = oferta.length > 24 ? oferta.slice(0, 24).trim() : oferta;
     }
 
     if (celdaTexto(f.stock) !== "") {
@@ -309,12 +353,13 @@ export function generarSalidas(
     });
   }
 
-  const entries: IndexEntry[] = productos.map((p) => [
-    p.codigo,
-    p.descripcion,
-    p.precio,
-    p.stand,
-  ]);
+  // Índice compacto: las filas en oferta agregan precio anterior + etiqueta
+  // (largo 6); el resto queda en largo 4 para no inflar el índice global.
+  const entries: IndexEntry[] = productos.map((p) =>
+    p.precioAnterior !== undefined || p.oferta !== undefined
+      ? [p.codigo, p.descripcion, p.precio, p.stand, p.precioAnterior ?? 0, p.oferta ?? ""]
+      : [p.codigo, p.descripcion, p.precio, p.stand]
+  );
 
   return {
     manifest: {
@@ -348,6 +393,16 @@ const ALIAS_PRODUCTOS: Record<string, readonly string[]> = {
   stand: ["stand", "numerodestand", "nrostand", "numstand", "nrodestand", "nodestand", "ndestand"],
   foto: ["foto", "imagen", "urlfoto", "img"],
   stock: ["stock", "cantidad", "unidades"],
+  precioAnterior: [
+    "precioanterior",
+    "preciolista",
+    "preciolistas",
+    "precioviejo",
+    "precioregular",
+    "antes",
+    "listprice",
+  ],
+  oferta: ["oferta", "promo", "promocion", "etiqueta", "descuento", "combo"],
 };
 
 const ALIAS_STANDS: Record<string, readonly string[]> = {
