@@ -58,14 +58,17 @@ async function leerHoja(
     return { headers, filas: rows.slice(1) };
   }
 
-  // ---- xlsx (archivo local o URL que devuelve xlsx) ----
-  const wb = new ExcelJS.Workbook();
+  // Una URL siempre debe ser CSV (planilla publicada como CSV).
   if (esUrl(fuente)) {
-    const buf = await descargarBuffer(fuente);
-    await wb.xlsx.load(buf);
-  } else {
-    await wb.xlsx.readFile(fuente);
+    throw new Error(
+      `La URL ${fuente} no parece CSV. Publicá la planilla como CSV ` +
+        `(Archivo → Compartir → Publicar en la web → CSV, la URL trae output=csv).`
+    );
   }
+
+  // ---- xlsx local ----
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile(fuente);
   const ws = wb.worksheets[0];
   if (!ws) throw new Error(`${fuente} no tiene hojas`);
   const filas: unknown[][] = [];
@@ -86,12 +89,6 @@ async function descargarTexto(url: string): Promise<string> {
   const res = await fetch(url, { redirect: "follow" });
   if (!res.ok) throw new Error(`No se pudo descargar ${url} (HTTP ${res.status})`);
   return res.text();
-}
-
-async function descargarBuffer(url: string): Promise<Buffer> {
-  const res = await fetch(url, { redirect: "follow" });
-  if (!res.ok) throw new Error(`No se pudo descargar ${url} (HTTP ${res.status})`);
-  return Buffer.from(await res.arrayBuffer());
 }
 
 async function main() {

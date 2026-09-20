@@ -25,6 +25,38 @@ plano) y poder cambiar precios/ofertas sin depender de un desarrollador.
 - **Badge**: `#d80060` (magenta apto para texto, AA con blanco) sobre la foto
   y al lado del título en resultados.
 
+### Publicación desde Google Sheets (Milestones B–C)
+- **La ingesta lee CSV además de xlsx**: `.csv` local o URL de planilla
+  publicada (`output=csv`). Mismo hash de versión que xlsx → camino
+  equivalente. Parser CSV propio (RFC 4180, sin deps, testeado). Una URL debe
+  ser CSV; xlsx solo local (evita un lío de tipos de `Buffer` y no aporta:
+  el flujo de Sheets es CSV).
+- **`SHEET_PRODUCTOS_URL` / `SHEET_STANDS_URL`** (env) apuntan a la planilla
+  sin tocar código; `IMAGE_BASE_URL` resuelve fotos cargadas como nombre de
+  archivo suelto contra una base (ej bucket R2), manteniendo la planilla limpia.
+- **Botón en la planilla (Apps Script) → GitHub Action → deploy**: el operador
+  edita el Sheet y toca "FarmaFest ▸ Publicar precios"; Apps Script hace un
+  pre-chequeo rápido y dispara `repository_dispatch`; el Action corre la
+  ingesta (validación autoritativa), commitea `public/data`, y CF Pages
+  redeploya. ~2–3 min, cero interacción con el repo. El reporte de filas
+  descartadas queda en el summary del run. Guía en `apps-script/README.md`.
+- **Planilla pública como CSV**: los precios van a un sitio público igual, así
+  que publicar el CSV (solo lectura) es aceptable y evita credenciales. Queda
+  documentada la alternativa con cuenta de servicio si la quieren privada.
+
+### Deploy en Cloudflare Pages (Milestone D)
+- **Migrado de Vercel a Cloudflare Pages**: sitio 100% estático → la ventaja
+  de Vercel (host nativo de Next) no aplica; CF da tráfico ilimitado en el
+  free tier (mejor para un pico en un predio) y deja la puerta abierta a
+  Workers/KV/R2 (fotos, datos en vivo). Build command `npm run build`, output
+  `out`.
+- **`public/_headers`** reemplaza `vercel.json` (Cache-Control de `/data`,
+  `/sw.js`, manifest y assets inmutables). Next copia `public/*` a `out/`.
+- **`_headers`/`_redirects` excluidos del precache del SW**: CF Pages los
+  consume en el build y NO los sirve; si se precachearan, `cache.addAll`
+  fallaría con 404 en CF (localmente sí se sirven, así que era un bug que solo
+  aparecía en producción). Excluidos en `generate-sw.ts`.
+
 ## Stack y arquitectura
 
 - **Scaffold manual en vez de create-next-app**: control total de versiones y

@@ -36,7 +36,18 @@ function main() {
 
   const all = walk(OUT)
     .map((f) => "/" + path.relative(OUT, f).split(path.sep).join("/"))
-    .filter((url) => !url.startsWith("/data/") && url !== "/sw.js")
+    // Excluidos del precache:
+    //  - /data/*  → network-first en runtime (precios que cambian)
+    //  - /sw.js   → nunca cachear el propio SW
+    //  - /_headers /_redirects → Cloudflare Pages los consume en el build y NO
+    //    los sirve; si se precachearan, cache.addAll fallaría (404) en CF.
+    .filter(
+      (url) =>
+        !url.startsWith("/data/") &&
+        url !== "/sw.js" &&
+        url !== "/_headers" &&
+        url !== "/_redirects"
+    )
     // Precacheamos las URLs "bonitas" (la forma final que navega el browser):
     // /stand/12/index.html → /stand/12/ y /index.html → /
     // Si se cachearan los paths con index.html, hostings que redirigen
