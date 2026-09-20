@@ -1,0 +1,10 @@
+# Config de Cloudflare Pages (sitio 100% estático).
+# Fuerza el modo "Pages estático": Cloudflare sube la carpeta out/ tal cual,
+# sin usar el adaptador de Workers de Next (que es lo que estaba fallando,
+# porque esta app es un export estático, no una app con servidor).
+#
+# IMPORTANTE: `name` debe coincidir EXACTO con el nombre del proyecto que
+# figura arriba en el dashboard de Cloudflare. Si ahí dice otra cosa,
+# cambiá esta línea para que sean idénticos.
+name = "carrito-farmafest"
+pages_build_output_dir = "out"
