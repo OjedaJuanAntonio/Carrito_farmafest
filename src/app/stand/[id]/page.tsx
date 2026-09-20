@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { loadStandsAtBuild } from "@/lib/build-data";
+import { loadStandsAtBuild, loadStandDataAtBuild } from "@/lib/build-data";
 import { StandView } from "@/components/StandView";
 
 /**
@@ -37,10 +37,12 @@ export default async function StandPage({
   const { id } = await params;
   const stands = await loadStandsAtBuild();
   const stand = stands.find((s) => String(s.id) === id);
+  const snapshot = await loadStandDataAtBuild(id);
   return (
     <StandView
       standId={Number(id)}
       proveedorInicial={stand?.proveedor ?? `Stand ${id}`}
+      initialData={snapshot}
     />
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { StandData } from "@/lib/types";
 import Link from "next/link";
 import { fetchStandData, formatPrice } from "@/lib/data";
@@ -23,13 +23,25 @@ type State =
 export function StandView({
   standId,
   proveedorInicial,
+  initialData = null,
 }: {
   standId: number;
   proveedorInicial: string;
+  /** Snapshot horneado en build para el primer pintado (LCP inmediato). */
+  initialData?: StandData | null;
 }) {
-  const [state, setState] = useState<State>({ status: "loading" });
+  const [state, setState] = useState<State>(
+    initialData ? { status: "ok", data: initialData } : { status: "loading" }
+  );
   const [query, setQuery] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  // Render progresivo: una página de stand puede tener 250+ productos y
+  // pintarlos todos de una bloquea el teléfono. Mostramos de a tandas y el
+  // resto se revela al hacer scroll (sentinela). Con búsqueda activa se
+  // muestran todos los matches, que son pocos.
+  const LOTE = 36;
+  const [limite, setLimite] = useState(LOTE);
+  const sentinelRef = useRef<HTMLButtonElement | null>(null);
   const cart = useCart();
   const standGroup = useMemo(
     () => groupByStand(cart).find((g) => g.stand === standId),
@@ -38,13 +50,20 @@ export function StandView({
 
   useEffect(() => {
     let cancelled = false;
-    setState({ status: "loading" });
+    // Si ya hay snapshot horneado, no volvemos al skeleton: refrescamos en
+    // silencio y solo mostramos "loading" cuando arrancamos sin datos.
+    setState((prev) =>
+      prev.status === "ok" ? prev : { status: "loading" }
+    );
     fetchStandData(standId)
       .then((data) => {
         if (!cancelled) setState({ status: "ok", data });
       })
       .catch(() => {
-        if (!cancelled) setState({ status: "error" });
+        // Sin señal: si teníamos snapshot lo dejamos; si no, error.
+        if (!cancelled) {
+          setState((prev) => (prev.status === "ok" ? prev : { status: "error" }));
+        }
       });
     return () => {
       cancelled = true;
@@ -60,18 +79,48 @@ export function StandView({
     );
   }, [state, query]);
 
+  // Con búsqueda mostramos todos los matches (son pocos); sin búsqueda,
+  // paginamos por scroll.
+  const buscando = query.trim().length > 0;
+  const visibles = buscando ? productos : productos.slice(0, limite);
+  const hayMas = !buscando && limite < productos.length;
+
+  // Reset del límite al cambiar de stand, recargar o tocar la búsqueda.
+  useEffect(() => {
+    setLimite(LOTE);
+  }, [standId, reloadKey, query]);
+
+  // Auto-carga: revela la próxima tanda cuando el botón entra en viewport
+  // (mejora progresiva). El botón sigue siendo clickeable como respaldo
+  // garantizado si el IntersectionObserver no está disponible.
+  useEffect(() => {
+    if (!hayMas || typeof IntersectionObserver === "undefined") return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setLimite((l) => l + LOTE);
+        }
+      },
+      { rootMargin: "800px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hayMas, limite]);
+
   const proveedor =
     state.status === "ok" ? state.data.proveedor : proveedorInicial;
 
   return (
     <div className="pt-4">
       <div className="rounded-2xl bg-brand text-white px-4 py-5 shadow">
-        <p className="text-xs uppercase tracking-widest opacity-80">
+        <p className="text-xs uppercase tracking-widest text-white">
           Stand {standId}
         </p>
         <h1 className="text-2xl font-bold leading-tight mt-1">{proveedor}</h1>
         {state.status === "ok" && (
-          <p className="text-sm opacity-80 mt-1">
+          <p className="text-sm text-white mt-1">
             {state.data.productos.length} productos
           </p>
         )}
@@ -113,13 +162,27 @@ export function StandView({
               No hay productos que coincidan con “{query}”.
             </p>
           ) : (
-            <ul className="flex flex-col gap-2 mt-1">
-              {productos.map((p) => (
-                <li key={p.codigo}>
-                  <ProductCard product={p} action={<AddToCartButton product={p} />} />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="flex flex-col gap-2 mt-1">
+                {visibles.map((p) => (
+                  <li key={p.codigo} className="cv-auto">
+                    <ProductCard
+                      product={p}
+                      action={<AddToCartButton product={p} />}
+                    />
+                  </li>
+                ))}
+              </ul>
+              {hayMas && (
+                <button
+                  ref={sentinelRef}
+                  onClick={() => setLimite((l) => l + LOTE)}
+                  className="w-full py-4 mt-2 rounded-xl border border-border-c bg-surface text-sm font-semibold text-brand active:bg-brand-soft"
+                >
+                  Ver más productos ({productos.length - limite} restantes)
+                </button>
+              )}
+            </>
           )}
         </>
       )}

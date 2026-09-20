@@ -53,6 +53,17 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+/*
+ * Listas largas (una página de stand puede tener 250+ productos): el navegador
+ * saltea el render/layout de las tarjetas fuera de pantalla y reserva su alto,
+ * mejorando el primer render sin sacar nada del DOM (la búsqueda sigue viendo
+ * todo). ~112px es el alto típico de una ProductCard.
+ */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 112px;
+}
+
 /* Círculos flotantes de la landing (firma visual del sitio FarmaFest) */
 @keyframes fest-float {
   from {

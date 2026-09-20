@@ -57,6 +57,28 @@ plano) y poder cambiar precios/ofertas sin depender de un desarrollador.
   fallaría con 404 en CF (localmente sí se sirven, así que era un bug que solo
   aparecía en producción). Excluidos en `generate-sw.ts`.
 
+### Performance de la página de stand (Milestone E)
+Al medir con throttling de dispositivo real, un stand de 260 productos daba
+LCP 5,3 s / perf 67 (pintaba todo recién tras el fetch runtime) y quedaban dos
+issues de accesibilidad preexistentes.
+- **Snapshot horneado en build** (`loadStandDataAtBuild`): la página de stand
+  incluye los productos en el HTML estático para primer pintado inmediato
+  (LCP), y **refresca precios por fetch en runtime** sin volver al skeleton.
+  Mismo patrón que la home. Resultado: perf 67→**97**, LCP 5,3→2,0 s.
+  (El snapshot se actualiza en cada rebuild; los precios en caliente siguen
+  llegando por fetch aunque el snapshot esté un build atrás.)
+- **Render progresivo** (tandas de 36 + botón "Ver más" con auto-carga por
+  IntersectionObserver): un stand de 200+ productos no bloquea el hilo
+  principal (TBT 430→80 ms). El **botón es el mecanismo garantizado**; el
+  observer es mejora progresiva (en algunos entornos/paneles emulados el IO
+  no dispara, por eso no se depende solo de él). Con búsqueda activa se
+  muestran todos los matches.
+- **`content-visibility: auto`** (`.cv-auto`) en las tarjetas: el navegador
+  saltea el layout de las de fuera de pantalla.
+- **Accesibilidad a 100**: el header del stand usaba `opacity-80` sobre azul
+  (contraste < 4,5) → blanco pleno; y las tarjetas saltaban de `h1` a `h3`
+  → `h2` (orden de headings correcto). Ambos preexistentes.
+
 ## Stack y arquitectura
 
 - **Scaffold manual en vez de create-next-app**: control total de versiones y

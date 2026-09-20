@@ -1,11 +1,11 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type { Stand } from "./types";
+import type { Stand, StandData } from "./types";
 
 /**
- * Lectura de datos en BUILD TIME (generateStaticParams / metadata).
- * Solo se usa la lista de stands para enumerar las rutas estáticas;
- * los precios y productos SIEMPRE se leen en runtime vía fetch.
+ * Lectura de datos en BUILD TIME (generateStaticParams / metadata / snapshot
+ * inicial). Los precios SIEMPRE se refrescan en runtime vía fetch; el snapshot
+ * horneado en el HTML es solo para el primer pintado (LCP inmediato).
  */
 
 let standsCache: Promise<Stand[]> | null = null;
@@ -24,4 +24,19 @@ export function loadStandsAtBuild(): Promise<Stand[]> {
     });
   }
   return standsCache;
+}
+
+/**
+ * Snapshot de los productos de un stand en build time (para el primer pintado).
+ * Devuelve null si el archivo no existe todavía (la app cae al fetch runtime).
+ */
+export async function loadStandDataAtBuild(
+  id: number | string
+): Promise<StandData | null> {
+  const file = path.join(process.cwd(), "public", "data", "stand", `${id}.json`);
+  try {
+    return JSON.parse(await fs.readFile(file, "utf8")) as StandData;
+  } catch {
+    return null;
+  }
 }

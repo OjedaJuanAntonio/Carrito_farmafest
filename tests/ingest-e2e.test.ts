@@ -29,8 +29,9 @@ beforeAll(async () => {
 
   const wbProd = new ExcelJS.Workbook();
   const wp = wbProd.addWorksheet("Productos");
-  // encabezados con variantes reales (mayúsculas, acentos, espacios)
-  wp.addRow(["Código de Barras", "DESCRIPCIÓN", "Precio", "Nº de Stand", "Foto", "Stock"]);
+  // encabezados con variantes reales (mayúsculas, acentos, espacios) +
+  // columnas de oferta al final (se mapean por nombre, no por posición).
+  wp.addRow(["Código de Barras", "DESCRIPCIÓN", "Precio", "Nº de Stand", "Foto", "Stock", "Precio anterior", "Oferta"]);
   wp.addRow(["7791000000017", "Ibuprofeno 400mg x10", 3500, 1, "", 12]); // ok
   wp.addRow(["7791000000024", "Paracetamol 500mg", "$ 2.100,50", 2, "", ""]); // ok, precio texto AR
   wp.addRow(["7791000000024", "Duplicado del anterior", 999, 1, "", ""]); // código duplicado
@@ -40,6 +41,9 @@ beforeAll(async () => {
   wp.addRow(["", "", "", "", "", ""]); // fila vacía → se ignora
   wp.addRow(["7791000000055", "", 500, 1, "", ""]); // sin descripción
   wp.addRow(["7791000000062", "Con stock roto", 800, 2, "", "muchos"]); // advertencia
+  wp.addRow(["7791000000079", "En oferta 30%", 700, 2, "", "", 1000, ""]); // precio anterior válido
+  wp.addRow(["7791000000086", "Precio anterior menor", 900, 2, "", "", 800, ""]); // anterior <= precio → se ignora
+  wp.addRow(["7791000000093", "Combo sin baja", 500, 1, "", "", "", "2x1"]); // etiqueta sin precio anterior
   await wbProd.xlsx.writeFile(path.join(dir, "productos.xlsx"));
 
   stdout = execFileSync(
@@ -76,7 +80,40 @@ describe("ingesta E2E con datos rotos", () => {
       "7791000000017",
       "7791000000024",
       "7791000000062",
+      "7791000000079",
+      "7791000000086",
+      "7791000000093",
     ]);
+  });
+
+  it("procesa ofertas: precio anterior válido, etiqueta, y descarta anterior menor", () => {
+    const index = JSON.parse(
+      readFileSync(path.join(salida, "index.json"), "utf8")
+    ) as SearchIndexFile;
+    const byCode = new Map(index.entries.map((e) => [e[0], e]));
+
+    // precio anterior válido → entrada de largo 6 con el anterior
+    const oferta = byCode.get("7791000000079")!;
+    expect(oferta).toHaveLength(6);
+    expect(oferta[4]).toBe(1000);
+
+    // etiqueta sin baja de precio → largo 6 con oferta y anterior 0
+    const combo = byCode.get("7791000000093")!;
+    expect(combo).toHaveLength(6);
+    expect(combo[5]).toBe("2x1");
+
+    // precio anterior <= precio → se ignora (entrada normal de largo 4)
+    expect(byCode.get("7791000000086")).toHaveLength(4);
+
+    const stand2 = JSON.parse(
+      readFileSync(path.join(salida, "stand", "2.json"), "utf8")
+    ) as StandData;
+    expect(
+      stand2.productos.find((p) => p.codigo === "7791000000079")?.precioAnterior
+    ).toBe(1000);
+    expect(
+      stand2.productos.find((p) => p.codigo === "7791000000086")?.precioAnterior
+    ).toBeUndefined();
   });
 
   it("parsea el precio en formato argentino", () => {
@@ -103,7 +140,7 @@ describe("ingesta E2E con datos rotos", () => {
     const manifest = JSON.parse(
       readFileSync(path.join(salida, "manifest.json"), "utf8")
     );
-    expect(manifest.productos).toBe(3);
+    expect(manifest.productos).toBe(6);
     expect(manifest.stands).toBe(2);
     expect(manifest.version).toMatch(/^[0-9a-f]{10}$/);
   });

@@ -5,11 +5,14 @@ farmacias: ~60 stands de proveedores, ~9.000 productos, pensada para usarse
 desde el teléfono en el predio, **con señal mala o sin señal**.
 
 - **100% estática** (Next.js `output: 'export'`): se sirve como archivos
-  planos desde Vercel/CDN. Sin backend.
+  planos desde Cloudflare Pages / cualquier CDN. Sin backend.
 - **PWA offline**: tras la primera visita, todo el catálogo funciona sin
   conexión.
-- **Precios actualizables durante el evento sin redeploy** (ver runbook).
-- **Carrito local por stand** con checkout por caja de stand (QR).
+- **Precios y ofertas se editan en un Google Sheet y se publican con un
+  botón** (ver runbook), sin tocar el repo.
+- **Ofertas**: precio anterior tachado + badge `-X%` / etiqueta (`2x1`…).
+- **Carrito local por stand** con checkout por caja de stand (QR). *(El
+  carrito quedó en segundo plano; el foco es el catálogo de precios y fotos.)*
 
 ## Cómo se usa (flujo del evento)
 
@@ -48,43 +51,50 @@ npm run preview # sirve out/ en :4173 para probar offline/Lighthouse
 
 ## Runbook del evento
 
-### Publicar un cambio de precio EN CALIENTE (sin redeploy)
+### Publicar precios y ofertas EN CALIENTE (recomendado: Google Sheets)
 
-1. Corregí el Excel (`data-src/productos.xlsx`, o el archivo real que uses).
-2. Un solo comando:
+1. Editá la planilla de Google (precio, precio anterior, oferta, stock…).
+2. En la planilla: menú **FarmaFest → Publicar precios**.
+3. En 2–3 minutos los precios están online. Sin señal, los teléfonos muestran
+   el último precio conocido y avisan "sin conexión".
 
-   ```bash
-   npm run publish:data
-   ```
+Nadie toca el repo. El botón dispara un GitHub Action que corre la ingesta
+(validación incluida) y publica; Cloudflare Pages redeploya solo. El reporte
+de filas descartadas queda en la pestaña **Actions** del repo.
 
-   Esto corre la ingesta (valida y regenera `public/data/`), commitea **solo
-   los JSON de datos** y pushea. Vercel los sirve en ~1 minuto.
+**Puesta a punto (una vez)**: seguí **[apps-script/README.md](apps-script/README.md)**
+— armar la planilla, publicarla como CSV, cargar las URLs como *Variables* del
+repo y pegar el script del botón.
 
-3. Los teléfonos toman el precio nuevo en la próxima carga o revalidación
-   (la app lee los datos por fetch en runtime, nunca del bundle). Sin señal,
-   muestran el último precio conocido y avisan "sin conexión".
+**Columnas de la planilla `Productos`**: **Código de barras, Descripción,
+Precio, Stand** (requeridas) y opcionales **Precio anterior, Oferta, Foto,
+Stock**. Los encabezados toleran mayúsculas, acentos y variantes ("EAN",
+"Nº de stand", "Promo"…).
 
-Si la ingesta encuentra filas rotas, las descarta y te muestra **fila y
-motivo** (también en `reports/ingesta-report.txt`). Revisá antes de publicar.
+### Publicar por Excel (respaldo, sin planilla)
 
-### Cargar el Excel real (reemplazar los datos de ejemplo)
+1. Corregí `data-src/productos.xlsx` (o el archivo real).
+2. `npm run publish:data` — corre la ingesta y publica `public/data`.
 
-1. Poné los archivos en `data-src/`:
-   - `productos.xlsx` — columnas: **Código de barras, Descripción, Precio,
-     Stand** y opcionales **Foto, Stock**. Los encabezados se matchean con
-     tolerancia (mayúsculas, acentos, variantes tipo "EAN" o "Nº de stand").
-   - `stands.xlsx` — columnas: **Stand, Proveedor**.
-2. `npm run ingest` y revisá el reporte (filas descartadas, advertencias).
-3. Como cambió la lista de stands: `npm run build` y deploy completo
-   (`git push` — Vercel rebuildea). Los QR por stand apuntan a
-   `https://<dominio>/stand/<numero>/`.
+También podés apuntar la ingesta a una planilla publicada sin el botón:
 
-Reglas de la ingesta:
+```bash
+SHEET_PRODUCTOS_URL="https://…output=csv" SHEET_STANDS_URL="https://…output=csv" npm run ingest
+```
+
+Reglas de la ingesta (iguales para Excel, CSV o planilla):
 - Códigos: 6–14 dígitos; duplicados se descartan (gana la primera fila).
-- Precio: número de Excel o texto AR ("$ 1.234,50"); inválido → fila afuera.
-- Stand inexistente en `stands.xlsx` → fila afuera.
-- Foto y Stock son **opcionales por diseño**: sin foto se ve un placeholder
-  digno; sin stock no se muestra nada. Nunca bloquean un flujo.
+- Precio: número o texto AR ("$ 1.234,50"); inválido → fila afuera.
+- **Precio anterior**: solo se usa si es mayor al precio (genera el `-X%`).
+- **Oferta**: etiqueta libre; con baja de precio el badge muestra el `-X%`.
+- Stand inexistente → fila afuera.
+- Foto y Stock **opcionales**: sin foto, placeholder; sin stock, no se muestra.
+  Nunca bloquean un flujo. La foto puede ser URL completa o nombre de archivo
+  suelto + `IMAGE_BASE_URL` (ver apps-script/README.md → Imágenes).
+
+> **Alta/baja de stands** cambia las rutas estáticas: eso sí requiere `git
+> push` con rebuild (CF Pages) — no es un cambio "en caliente". Los precios y
+> ofertas sí lo son.
 
 ### Cambiar la variante de QR del checkout
 
@@ -131,11 +141,11 @@ Pendiente para marketing: PNG 192/512 para el ícono PWA y apple-touch-icon
 ## Arquitectura (resumen)
 
 ```
-data-src/*.xlsx ──(npm run ingest)──▶ public/data/
-                                       ├── manifest.json    versión de datos
-                                       ├── stands.json      directorio
-                                       ├── stand/<id>.json  productos por stand
-                                       └── index.json       índice de búsqueda
+Google Sheet ──(botón)──▶ GitHub Action ──(npm run ingest)──▶ public/data/
+  o Excel/CSV local        (valida + commit)                   ├── manifest.json
+                                    │                           ├── stands.json
+                                    ▼                           ├── stand/<id>.json
+                          Cloudflare Pages redeploya            └── index.json
 ```
 
 - Las páginas son estáticas; **los datos se leen en runtime por fetch** con
@@ -154,7 +164,14 @@ Más contexto y por qué de cada decisión: **[DECISIONS.md](DECISIONS.md)**.
 
 ## Deploy
 
-- **Vercel**: importar el repo, framework Next.js, sin variables de entorno.
-  `vercel.json` ya configura los `Cache-Control` de `/data/` y `sw.js`.
+- **Cloudflare Pages** (recomendado): conectar el repo. Build command
+  `npm run build`, output directory `out`. Sin variables de entorno para la
+  app; `public/_headers` ya configura los `Cache-Control`. Para el botón de la
+  planilla, cargar `SHEET_PRODUCTOS_URL` / `SHEET_STANDS_URL` (y opcional
+  `IMAGE_BASE_URL`) como *Variables* del repo en GitHub (ver
+  [apps-script/README.md](apps-script/README.md)).
 - **Cualquier hosting estático**: servir `out/` (ver `docker/nginx.conf` como
   referencia de headers).
+- **Imágenes de productos**: se recomienda un bucket **Cloudflare R2** público
+  y poner su URL como `IMAGE_BASE_URL`; así la planilla lleva solo el nombre
+  del archivo.

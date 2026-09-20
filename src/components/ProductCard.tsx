@@ -26,9 +26,9 @@ export function ProductCard({
         <OfferBadge product={product} className="absolute -top-1.5 -left-1.5 shadow" />
       </div>
       <div className="flex flex-col min-w-0 flex-1">
-        <h3 className="text-sm font-medium leading-snug line-clamp-2">
+        <h2 className="text-sm font-medium leading-snug line-clamp-2">
           {product.descripcion}
-        </h3>
+        </h2>
         <p className="text-[11px] text-ink-muted mt-0.5 font-mono">
           {product.codigo}
         </p>
