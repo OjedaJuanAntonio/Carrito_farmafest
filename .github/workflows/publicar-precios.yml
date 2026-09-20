@@ -1,0 +1,62 @@
+name: Publicar precios
+
+# Se dispara desde el botón de la planilla (Apps Script → repository_dispatch)
+# o a mano desde la pestaña Actions. Lee el Google Sheet publicado como CSV,
+# corre la ingesta (validación incluida) y commitea los JSON. Cloudflare Pages
+# detecta el push y redepliega con los precios nuevos.
+on:
+  repository_dispatch:
+    types: [publicar-precios]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Nunca dos publicaciones pisándose; encolar en vez de cancelar.
+concurrency:
+  group: publicar-precios
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Ingesta desde la planilla
+        env:
+          # URLs del Google Sheet publicado como CSV (una por pestaña).
+          # Configurar en: Settings → Secrets and variables → Actions → Variables
+          SHEET_PRODUCTOS_URL: ${{ vars.SHEET_PRODUCTOS_URL }}
+          SHEET_STANDS_URL: ${{ vars.SHEET_STANDS_URL }}
+          # Opcional: base para fotos cargadas como nombre de archivo suelto.
+          IMAGE_BASE_URL: ${{ vars.IMAGE_BASE_URL }}
+        run: npm run ingest
+
+      - name: Commit y push si cambiaron los datos
+        run: |
+          git config user.name "farmafest-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add public/data reports
+          if git diff --cached --quiet; then
+            echo "Sin cambios en los datos; nada que publicar."
+          else
+            git commit -m "datos: actualización desde planilla ($(date -u +%Y-%m-%dT%H:%MZ))"
+            git push
+            echo "Publicado. Cloudflare Pages redeploya en ~1–2 min."
+          fi
+
+      - name: Resumen de la ingesta
+        if: always()
+        run: |
+          echo "### Reporte de ingesta" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat reports/ingesta-report.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "(sin reporte)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
