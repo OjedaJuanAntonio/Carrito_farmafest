@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { branding } from "@/config/branding";
+import { FEATURES } from "@/config/features";
 import { loadWordmarkSvg } from "@/lib/wordmark";
 
 export const metadata: Metadata = {
   title: "El evento",
-  description: `${branding.name}: ${branding.eventDates}. ${branding.eventPlace}. Stands de proveedores, ofertas del evento y tu carrito en el teléfono.`,
+  description: `${branding.name}: ${branding.eventDates}. ${branding.eventPlace}. Stands de proveedores, precios, ofertas y fotos en tu teléfono.`,
 };
 
 /**
@@ -40,12 +41,14 @@ export default function EventoPage() {
             >
               Buscar productos
             </Link>
-            <Link
-              href="/carrito/"
-              className="h-11 px-6 rounded-2xl font-semibold text-brand flex items-center active:bg-brand-soft"
-            >
-              Ver mi carrito
-            </Link>
+            {FEATURES.carrito && (
+              <Link
+                href="/carrito/"
+                className="h-11 px-6 rounded-2xl font-semibold text-brand flex items-center active:bg-brand-soft"
+              >
+                Ver mi carrito
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -69,21 +72,41 @@ export default function EventoPage() {
         </p>
       </section>
 
-      {/* ---- Cómo funciona el carrito ---- */}
+      {/* ---- Cómo funciona ---- */}
       <section className="mt-8 px-1">
-        <h2 className="text-xl font-bold">Tu carrito, en tu teléfono</h2>
+        <h2 className="text-xl font-bold">
+          {FEATURES.carrito ? "Tu carrito, en tu teléfono" : "Cómo funciona"}
+        </h2>
         <ol className="mt-4 flex flex-col gap-4">
           <Paso n={1} color="bg-fest-azul">
             <b>Escaneá el QR</b> pegado en el stand (o buscá cualquier
-            producto desde la home) y mirá precios al instante.
+            producto desde la home) y mirá precios y fotos al instante.
           </Paso>
           <Paso n={2} color="bg-fest-magenta">
-            <b>Armá tu carrito</b> mientras recorrés. Se guarda en tu
-            teléfono y se agrupa solo por stand.
+            {FEATURES.carrito ? (
+              <>
+                <b>Armá tu carrito</b> mientras recorrés. Se guarda en tu
+                teléfono y se agrupa solo por stand.
+              </>
+            ) : (
+              <>
+                <b>Compará precios y ofertas</b> entre stands mientras
+                recorrés el predio.
+              </>
+            )}
           </Paso>
           <Paso n={3} color="bg-fest-verde">
-            <b>Pasá por la caja del stand</b> y mostrá el QR de tu pedido
-            para pagar. Cada stand cobra en su propia caja.
+            {FEATURES.carrito ? (
+              <>
+                <b>Pasá por la caja del stand</b> y mostrá el QR de tu pedido
+                para pagar. Cada stand cobra en su propia caja.
+              </>
+            ) : (
+              <>
+                <b>Comprá en el stand</b> que quieras. Cada proveedor cobra en
+                su propia caja.
+              </>
+            )}
           </Paso>
         </ol>
         <p className="text-xs text-ink-muted mt-4">
@@ -101,14 +124,13 @@ export default function EventoPage() {
             querés, el navegador te ofrece agregarla a tu pantalla de inicio.
           </Faq>
           <Faq q="¿Funciona sin señal?">
-            Sí. Después de la primera visita, el catálogo completo y tu
-            carrito quedan disponibles aunque no tengas conexión. Los precios
-            se actualizan cuando volvés a tener señal.
+            Sí. Después de la primera visita, el catálogo completo queda
+            disponible aunque no tengas conexión. Los precios se actualizan
+            cuando volvés a tener señal.
           </Faq>
           <Faq q="¿Cómo pago?">
             En la caja de cada stand, con los medios de pago que acepte ese
-            proveedor. La app no cobra: te genera un QR con tu pedido para
-            agilizar la fila.
+            proveedor. La app no cobra: es para ver precios, ofertas y fotos.
           </Faq>
           <Faq q="¿Los precios de la app son los finales?">
             Los precios se cargan y actualizan durante el evento, pero el
