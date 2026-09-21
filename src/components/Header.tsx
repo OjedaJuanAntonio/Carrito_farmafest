@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { branding } from "@/config/branding";
+import { FEATURES } from "@/config/features";
 import { CartLink } from "./CartLink";
 
 /**
@@ -31,7 +32,7 @@ export function Header() {
         >
           Evento
         </Link>
-        <CartLink />
+        {FEATURES.carrito && <CartLink />}
       </div>
     </header>
   );

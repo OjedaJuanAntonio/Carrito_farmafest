@@ -7,6 +7,7 @@ import { fetchStandData, formatPrice } from "@/lib/data";
 import { normalizeText } from "@/lib/search";
 import { groupByStand } from "@/lib/cart";
 import { useCart } from "@/lib/cart-store";
+import { FEATURES } from "@/config/features";
 import { ProductCard } from "./ProductCard";
 import { AddToCartButton } from "./AddToCartButton";
 
@@ -114,6 +115,26 @@ export function StandView({
 
   return (
     <div className="pt-4">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1.5 h-9 pl-1.5 pr-3 -mt-1 mb-2 rounded-lg text-sm font-semibold text-brand active:bg-brand-soft"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+        Volver al inicio
+      </Link>
+
       <div className="rounded-2xl bg-brand text-white px-4 py-5 shadow">
         <p className="text-xs uppercase tracking-widest text-white">
           Stand {standId}
@@ -168,7 +189,11 @@ export function StandView({
                   <li key={p.codigo} className="cv-auto">
                     <ProductCard
                       product={p}
-                      action={<AddToCartButton product={p} />}
+                      action={
+                        FEATURES.carrito ? (
+                          <AddToCartButton product={p} />
+                        ) : undefined
+                      }
                     />
                   </li>
                 ))}
@@ -187,7 +212,7 @@ export function StandView({
         </>
       )}
 
-      {standGroup && (
+      {FEATURES.carrito && standGroup && (
         <div className="fixed bottom-0 inset-x-0 z-20 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none">
           <Link
             href="/carrito/"
