@@ -17,6 +17,7 @@
   --color-border-c: var(--border-c);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-success: var(--success);
 
   /* Paleta festival FarmaFest: solo uso decorativo (círculos, chips) */
   --color-fest-azul: var(--fest-azul);

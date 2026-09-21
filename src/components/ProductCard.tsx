@@ -20,7 +20,7 @@ function nivelStock(stock: number | undefined) {
   if (stock <= 0) return { label: "Sin stock", className: "text-danger font-medium" };
   if (stock <= POCO_STOCK_MAX)
     return { label: "Poco stock", className: "text-warning font-medium" };
-  return { label: "Hay stock", className: "text-ink-muted" };
+  return { label: "Hay stock", className: "text-success font-medium" };
 }
 
 /**

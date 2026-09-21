@@ -56,6 +56,8 @@ export const branding = {
     danger: "#dc2626",
     /** Advertencia (ámbar apto para texto chico sobre blanco, AA ~4.9:1) */
     warning: "#b45309",
+    /** OK / disponible (verde apto para texto chico sobre blanco, AA ~4.5:1) */
+    success: "#15803d",
   },
 
   /**
@@ -95,6 +97,7 @@ export function brandingCssVars(): Record<string, string> {
     "--border-c": c.border,
     "--danger": c.danger,
     "--warning": c.warning,
+    "--success": c.success,
     "--fest-azul": f.azul,
     "--fest-naranja": f.naranja,
     "--fest-magenta": f.magenta,
