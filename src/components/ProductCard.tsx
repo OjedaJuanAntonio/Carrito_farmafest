@@ -4,6 +4,26 @@ import { ProductImage } from "./ProductImage";
 import { OfferBadge } from "./OfferBadge";
 
 /**
+ * Umbral (inclusive) por debajo del cual el stock se considera "poco".
+ * El número exacto de stock no se muestra: solo el nivel (hay / poco / sin).
+ * Cambiá este valor si querés que "poco stock" arranque en otra cantidad.
+ */
+const POCO_STOCK_MAX = 5;
+
+/**
+ * Muestra el stock por NIVEL en vez del número exacto: "Hay stock",
+ * "Poco stock" o "Sin stock". Devuelve null cuando no vino el dato (no se
+ * muestra nada, igual que antes). Cada nivel trae su clase de color/énfasis.
+ */
+function nivelStock(stock: number | undefined) {
+  if (stock === undefined) return null;
+  if (stock <= 0) return { label: "Sin stock", className: "text-danger font-medium" };
+  if (stock <= POCO_STOCK_MAX)
+    return { label: "Poco stock", className: "text-warning font-medium" };
+  return { label: "Hay stock", className: "text-ink-muted" };
+}
+
+/**
  * Tarjeta de producto para la página de stand.
  * Diseñada para verse bien con o sin foto y con o sin stock.
  */
@@ -14,7 +34,7 @@ export function ProductCard({
   product: Product;
   action?: React.ReactNode;
 }) {
-  const sinStock = product.stock !== undefined && product.stock <= 0;
+  const stock = nivelStock(product.stock);
   return (
     <article className="flex gap-3 rounded-xl bg-surface border border-border-c p-3 shadow-sm">
       <div className="relative shrink-0">
@@ -42,13 +62,9 @@ export function ProductCard({
             <p className="text-lg font-bold text-brand-dark leading-none mt-0.5">
               {formatPrice(product.precio)}
             </p>
-            {product.stock !== undefined && (
-              <p
-                className={`text-[11px] mt-1 ${
-                  sinStock ? "text-danger font-medium" : "text-ink-muted"
-                }`}
-              >
-                {sinStock ? "Sin stock" : `Stock: ${product.stock}`}
+            {stock && (
+              <p className={`text-[11px] mt-1 ${stock.className}`}>
+                {stock.label}
               </p>
             )}
           </div>
