@@ -1,14 +1,9 @@
-# Despliegue del sitio estático en Cloudflare (Workers Static Assets).
+# Config de Cloudflare Pages (sitio 100% estático).
+# Cloudflare sube la carpeta out/ (el export estático de Next) tal cual, sin
+# usar código de servidor. Build command: `npm run build`; output: `out`.
 #
-# El build de Cloudflare corre `wrangler deploy`, que necesita saber qué subir.
-# Acá le declaramos la carpeta `out/` (el export estático de Next) como assets:
-# Cloudflare la sube y la sirve desde su edge, sin código de servidor.
-#
-# `not_found_handling = "404-page"` sirve out/404.html para rutas no existentes.
-# `name` debe coincidir con el nombre del proyecto en el dashboard de Cloudflare.
+# IMPORTANTE: `name` debe coincidir EXACTO con el nombre del proyecto que
+# figura en el dashboard de Cloudflare Pages. Si ahí dice otra cosa,
+# cambiá esta línea para que sean idénticos.
 name = "carrito-farmafest"
-compatibility_date = "2026-09-18"
-
-[assets]
-directory = "./out"
-not_found_handling = "404-page"
+pages_build_output_dir = "out"
