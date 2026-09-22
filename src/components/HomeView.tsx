@@ -158,8 +158,7 @@ export function HomeView({
           </h2>
           <VenueMap />
           <p className="text-[11px] text-ink-muted mt-1.5 px-1">
-            Deslizá para recorrer el predio · tocá un stand para ver sus
-            productos.
+            Tocá un stand para ver sus productos · pellizcá para acercarte.
           </p>
         </section>
       )}

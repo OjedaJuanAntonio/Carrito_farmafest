@@ -11,7 +11,10 @@
  * - `zonas`: baños, oficina, barra, etc. Solo para orientarse.
  */
 
-export const VENUE_VIEWBOX = { w: 1307, h: 641 } as const;
+export const VENUE_VIEWBOX = { w: 1307, h: 627 } as const;
+
+/** Ruta del plano oficial (imagen de fondo del mapa). */
+export const VENUE_PLANO = "/img/plano-predio.webp";
 
 export interface VenueBox {
   id: number;
@@ -45,7 +48,7 @@ export const VENUE_STANDS: VenueBox[] = [
   // Columna derecha (18–20)
   { id: 18, nombre: "Bernabó", x: 1243, y: 195, w: 58, h: 62 },
   { id: 19, nombre: "Laboratorios ENA", x: 1243, y: 262, w: 58, h: 62 },
-  { id: 20, nombre: "Elea / Adermicin", x: 1243, y: 330, w: 58, h: 62 },
+  { id: 20, nombre: "Elea", x: 1243, y: 330, w: 58, h: 62 },
 
   // Fila 2 (50–42, de izquierda a derecha)
   { id: 50, nombre: "Andrómaco", x: 127, y: 100, w: 88, h: 98 },

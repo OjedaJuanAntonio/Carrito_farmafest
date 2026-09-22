@@ -55,27 +55,25 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Mapa del predio (VenueMap): resalte del stand al tocar/enfocar */
-.venue-stand {
+/* Mapa del predio (VenueMap): hotspots transparentes sobre el plano real,
+ * que se resaltan al tocar/enfocar. */
+.venue-hotspot {
   cursor: pointer;
 }
-.venue-stand rect {
-  transition: fill 0.12s ease;
-}
-.venue-stand:hover rect,
-.venue-stand:focus-visible rect {
-  fill: var(--brand);
-}
-.venue-stand:hover text,
-.venue-stand:focus-visible text {
-  fill: #fff;
-}
-.venue-stand:focus {
-  outline: none;
-}
-.venue-stand:focus-visible rect {
-  stroke: var(--brand-dark);
+.venue-hotspot rect {
+  fill: transparent;
+  stroke: transparent;
   stroke-width: 3;
+  pointer-events: all; /* target aunque el relleno sea transparente */
+  transition: fill 0.12s ease, stroke 0.12s ease;
+}
+.venue-hotspot:hover rect,
+.venue-hotspot:focus-visible rect {
+  fill: color-mix(in srgb, var(--brand) 30%, transparent);
+  stroke: var(--brand-dark);
+}
+.venue-hotspot:focus {
+  outline: none;
 }
 
 /*

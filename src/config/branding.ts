@@ -18,7 +18,7 @@ export const branding = {
   /** Nombre visible de la app */
   name: "FarmaFest",
   /** Bajada corta que aparece en la home */
-  tagline: "Tu carrito del evento",
+  tagline: "Precios y ofertas del evento",
   /** Fechas del evento (solo texto informativo) */
   eventDates: "15 al 17 de septiembre de 2026 · a confirmar",
   /** Lugar del evento (texto informativo de la landing) */
