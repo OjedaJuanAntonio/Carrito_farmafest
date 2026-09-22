@@ -10,10 +10,12 @@ import {
 } from "react";
 import Link from "next/link";
 import { branding } from "@/config/branding";
+import { FEATURES } from "@/config/features";
 import { fetchSearchIndex, fetchStands, formatPrice } from "@/lib/data";
 import { prepareDocs, searchDocs, type SearchDoc } from "@/lib/search";
 import type { Stand } from "@/lib/types";
 import { OfferBadge } from "./OfferBadge";
+import { VenueMap } from "./VenueMap";
 
 /**
  * Home: buscador global sobre todos los productos del evento.
@@ -149,8 +151,21 @@ export function HomeView({
         </p>
       )}
 
+      {!searching && FEATURES.mapa && (
+        <section className="mt-6">
+          <h2 className="text-sm font-semibold text-ink-muted uppercase tracking-wide px-1 mb-2">
+            Mapa del predio
+          </h2>
+          <VenueMap />
+          <p className="text-[11px] text-ink-muted mt-1.5 px-1">
+            Deslizá para recorrer el predio · tocá un stand para ver sus
+            productos.
+          </p>
+        </section>
+      )}
+
       {!searching && (
-        <section className="mt-4">
+        <section className="mt-6">
           <h2 className="text-sm font-semibold text-ink-muted uppercase tracking-wide px-1 mb-2">
             Stands del evento
           </h2>

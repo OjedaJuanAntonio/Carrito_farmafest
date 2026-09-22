@@ -11,4 +11,10 @@ export const FEATURES = {
    * enlazan desde ningún lado. Poné `true` para reactivar todo el flujo.
    */
   carrito: false,
+
+  /**
+   * Mapa del predio en la home (SVG clickeable con la ubicación de cada stand).
+   * Poné `false` para ocultarlo.
+   */
+  mapa: true,
 } as const;
