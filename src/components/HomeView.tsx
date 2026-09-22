@@ -15,7 +15,6 @@ import { fetchSearchIndex, fetchStands, formatPrice } from "@/lib/data";
 import { prepareDocs, searchDocs, type SearchDoc } from "@/lib/search";
 import type { Stand } from "@/lib/types";
 import { OfferBadge } from "./OfferBadge";
-import { VenueMap } from "./VenueMap";
 
 /**
  * Home: buscador global sobre todos los productos del evento.
@@ -96,12 +95,22 @@ export function HomeView({
             dangerouslySetInnerHTML={{ __html: wordmarkSvg }}
           />
           <p className="text-ink-muted text-sm mt-3">{branding.tagline}</p>
-          <Link
-            href="/evento/"
-            className="mt-3 text-sm font-semibold text-brand-dark rounded-lg px-3 py-1.5 bg-brand-soft active:opacity-80"
-          >
-            Conocé el evento →
-          </Link>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <Link
+              href="/evento/"
+              className="text-sm font-semibold text-brand-dark rounded-lg px-3 py-1.5 bg-brand-soft active:opacity-80"
+            >
+              Conocé el evento →
+            </Link>
+            {FEATURES.mapa && (
+              <Link
+                href="/mapa/"
+                className="text-sm font-semibold text-brand-dark rounded-lg px-3 py-1.5 bg-brand-soft active:opacity-80"
+              >
+                Mapa del predio →
+              </Link>
+            )}
+          </div>
         </div>
       )}
 
@@ -149,18 +158,6 @@ export function HomeView({
         <p className="text-center text-ink-muted text-sm py-6">
           Cargando catálogo…
         </p>
-      )}
-
-      {!searching && FEATURES.mapa && (
-        <section className="mt-6">
-          <h2 className="text-sm font-semibold text-ink-muted uppercase tracking-wide px-1 mb-2">
-            Mapa del predio
-          </h2>
-          <VenueMap />
-          <p className="text-[11px] text-ink-muted mt-1.5 px-1">
-            Tocá un stand para ver sus productos · pellizcá para acercarte.
-          </p>
-        </section>
       )}
 
       {!searching && (

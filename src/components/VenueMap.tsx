@@ -21,30 +21,29 @@ export function VenueMap() {
 
   return (
     <div className="rounded-2xl border border-border-c bg-white p-2 shadow-sm">
-      <div className="overflow-x-auto">
-        <svg
-          viewBox={`0 0 ${VENUE_VIEWBOX.w} ${VENUE_VIEWBOX.h}`}
-          role="group"
-          aria-label="Mapa del predio con los stands del evento"
-          className="block h-auto w-full"
-        >
-          <image
-            href={VENUE_PLANO}
-            x={0}
-            y={0}
-            width={VENUE_VIEWBOX.w}
-            height={VENUE_VIEWBOX.h}
-            preserveAspectRatio="xMidYMid meet"
+      <svg
+        viewBox={`0 0 ${VENUE_VIEWBOX.w} ${VENUE_VIEWBOX.h}`}
+        role="group"
+        aria-label="Mapa del predio con los stands del evento"
+        className="block h-auto w-full mx-auto"
+        style={{ maxHeight: "80svh" }}
+      >
+        <image
+          href={VENUE_PLANO}
+          x={0}
+          y={0}
+          width={VENUE_VIEWBOX.w}
+          height={VENUE_VIEWBOX.h}
+          preserveAspectRatio="xMidYMid meet"
+        />
+        {VENUE_STANDS.map((s) => (
+          <Hotspot
+            key={s.id}
+            s={s}
+            onOpen={() => router.push(`/stand/${s.id}/`)}
           />
-          {VENUE_STANDS.map((s) => (
-            <Hotspot
-              key={s.id}
-              s={s}
-              onOpen={() => router.push(`/stand/${s.id}/`)}
-            />
-          ))}
-        </svg>
-      </div>
+        ))}
+      </svg>
     </div>
   );
 }

@@ -26,6 +26,14 @@ export function Header() {
             className="h-[25px] w-auto"
           />
         </Link>
+        {FEATURES.mapa && (
+          <Link
+            href="/mapa/"
+            className="text-sm font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
+          >
+            Mapa
+          </Link>
+        )}
         <Link
           href="/evento/"
           className="text-sm font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
