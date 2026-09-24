@@ -109,3 +109,20 @@ a {
     animation: none;
   }
 }
+
+/* Impresión (hoja de QRs /qr): oculta la app y deja solo la grilla de QR */
+@media print {
+  body > header,
+  body > footer,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .qr-card {
+    break-inside: avoid;
+    border-color: #ccc !important;
+  }
+}
