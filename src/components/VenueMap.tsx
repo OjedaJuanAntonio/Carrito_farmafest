@@ -10,11 +10,11 @@ import {
 
 /**
  * Mapa del predio: el plano oficial real (`public/img/plano-predio.webp`, con
- * sus líneas, zonas y nombres) de fondo, y encima un hotspot clickeable por
- * cada stand → /stand/<id>. Los hotspots son transparentes y se resaltan al
- * tocar/enfocar, así el plano se ve tal cual pero cada stand es tappeable.
- * Va en un contenedor con scroll horizontal: en el teléfono se desliza para
- * recorrer todo el predio sin achicar el plano.
+ * sus líneas, zonas, números y colores) de fondo, y encima, por cada stand,
+ * el nombre del proveedor (rótulo ajustado al ancho del box) + un hotspot
+ * clickeable que se resalta al tocar/enfocar → /stand/<id>.
+ * En un contenedor con el plano a lo ancho; en /mapa entra completo y se puede
+ * hacer zoom con los dedos para leer los nombres.
  */
 export function VenueMap() {
   const router = useRouter();
@@ -37,18 +37,15 @@ export function VenueMap() {
           preserveAspectRatio="xMidYMid meet"
         />
         {VENUE_STANDS.map((s) => (
-          <Hotspot
-            key={s.id}
-            s={s}
-            onOpen={() => router.push(`/stand/${s.id}/`)}
-          />
+          <Stand key={s.id} s={s} onOpen={() => router.push(`/stand/${s.id}/`)} />
         ))}
       </svg>
     </div>
   );
 }
 
-function Hotspot({ s, onOpen }: { s: VenueBox; onOpen: () => void }) {
+function Stand({ s, onOpen }: { s: VenueBox; onOpen: () => void }) {
+  const fontSize = s.h >= 40 ? 7 : 5.5;
   return (
     <g
       className="venue-hotspot"
@@ -64,7 +61,24 @@ function Hotspot({ s, onOpen }: { s: VenueBox; onOpen: () => void }) {
       }}
     >
       <title>{`Stand ${s.id} · ${s.nombre}`}</title>
-      <rect x={s.x} y={s.y} width={s.w} height={s.h} rx={6} />
+      <rect x={s.x} y={s.y} width={s.w} height={s.h} rx={3} />
+      <text
+        x={s.x + s.w / 2}
+        y={s.y + s.h - 2.5}
+        textAnchor="middle"
+        fontSize={fontSize}
+        fontWeight={700}
+        textLength={s.w - 3}
+        lengthAdjust="spacingAndGlyphs"
+        fill="#0b2136"
+        stroke="#ffffff"
+        strokeWidth={fontSize * 0.32}
+        paintOrder="stroke"
+        strokeLinejoin="round"
+        style={{ pointerEvents: "none" }}
+      >
+        {s.nombre}
+      </text>
     </g>
   );
 }
