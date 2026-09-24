@@ -45,7 +45,8 @@ export function VenueMap() {
 }
 
 function Stand({ s, onOpen }: { s: VenueBox; onOpen: () => void }) {
-  const fontSize = s.h >= 40 ? 7 : 5.5;
+  // Fuente proporcional al alto del box (los 5x5 son grandes → nombre grande).
+  const fontSize = Math.max(6, Math.min(s.h * 0.17, 12));
   return (
     <g
       className="venue-hotspot"
@@ -64,11 +65,11 @@ function Stand({ s, onOpen }: { s: VenueBox; onOpen: () => void }) {
       <rect x={s.x} y={s.y} width={s.w} height={s.h} rx={3} />
       <text
         x={s.x + s.w / 2}
-        y={s.y + s.h - 2.5}
+        y={s.y + s.h - 4}
         textAnchor="middle"
         fontSize={fontSize}
         fontWeight={700}
-        textLength={s.w - 3}
+        textLength={s.w - 5}
         lengthAdjust="spacingAndGlyphs"
         fill="#0b2136"
         stroke="#ffffff"
