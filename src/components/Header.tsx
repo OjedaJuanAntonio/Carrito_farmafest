@@ -11,10 +11,10 @@ import { CartLink } from "./CartLink";
 export function Header() {
   return (
     <header className="sticky top-0 z-20 bg-surface/95 backdrop-blur border-b border-border-c">
-      <div className="max-w-lg mx-auto flex items-center gap-3 px-4 h-14">
+      <div className="max-w-lg mx-auto flex items-center gap-1 px-3 h-14">
         <Link
           href="/"
-          className="flex items-center min-w-0 flex-1"
+          className="flex items-center min-w-0 flex-1 mr-1"
           aria-label={`${branding.name}, inicio`}
         >
           <Image
@@ -23,24 +23,32 @@ export function Header() {
             width={107}
             height={25}
             priority
-            className="h-[25px] w-auto"
+            className="h-[22px] w-auto"
           />
         </Link>
-        {FEATURES.mapa && (
+        <nav className="flex items-center gap-0.5 shrink-0">
           <Link
-            href="/mapa/"
-            className="text-sm font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
+            href="/ofertas/"
+            className="text-[13px] font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
           >
-            Mapa
+            Ofertas
           </Link>
-        )}
-        <Link
-          href="/evento/"
-          className="text-sm font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
-        >
-          Evento
-        </Link>
-        {FEATURES.carrito && <CartLink />}
+          {FEATURES.mapa && (
+            <Link
+              href="/mapa/"
+              className="text-[13px] font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
+            >
+              Mapa
+            </Link>
+          )}
+          <Link
+            href="/evento/"
+            className="text-[13px] font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
+          >
+            Evento
+          </Link>
+          {FEATURES.carrito && <CartLink />}
+        </nav>
       </div>
     </header>
   );

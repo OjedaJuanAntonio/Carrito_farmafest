@@ -97,6 +97,12 @@ export function HomeView({
           <p className="text-ink-muted text-sm mt-3">{branding.tagline}</p>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
             <Link
+              href="/ofertas/"
+              className="text-sm font-semibold text-white rounded-lg px-3 py-1.5 bg-accent active:opacity-80"
+            >
+              Ver ofertas →
+            </Link>
+            <Link
               href="/evento/"
               className="text-sm font-semibold text-brand-dark rounded-lg px-3 py-1.5 bg-brand-soft active:opacity-80"
             >
