@@ -1,8 +1,14 @@
 # Publicar precios desde Google Sheets
 
-Este flujo permite que **cualquier persona edite precios, ofertas y stock en
-una planilla de Google y publique con un botón**, sin tocar el repositorio ni
+Este flujo permite que **cualquier persona edite precios y ofertas en una
+planilla de Google y publique con un botón**, sin tocar el repositorio ni
 esperar a un desarrollador.
+
+> **Un solo archivo para todo.** La planilla usa el **mismo formato que
+> POSBerry**: editás precios y descuentos en Google Sheets (el "master"),
+> tocás **Publicar** para la web, y cuando necesitás facturar **descargás** la
+> pestaña `Productos` como `.xlsx` (Archivo → Descargar → Microsoft Excel) y la
+> subís a POSBerry tal cual. La ingesta **detecta el formato POSBerry solo**.
 
 ```
 Editás la planilla  →  botón "FarmaFest ▸ Publicar precios"
@@ -16,30 +22,43 @@ Cloudflare Pages redeploya  →  precios nuevos online (~2–3 min)
 
 ## 1. Armar la planilla
 
-Creá un Google Sheet con **dos pestañas**:
+Creá un Google Sheet con **dos pestañas**: `Productos` (formato POSBerry) y
+`Stands` (mapeo de proveedores).
 
-**Pestaña `Stands`**
+### Pestaña `Productos` — formato POSBerry
 
-| Stand | Proveedor            |
-|-------|----------------------|
-| 1     | Laboratorios Andino  |
-| 2     | Droguería del Centro |
+Pegá acá el archivo de POSBerry **tal cual** (sus 28 columnas, en su orden).
+La app **solo lee** estas columnas; el resto las usa POSBerry y se ignoran:
 
-**Pestaña `Productos`** (las columnas opcionales pueden faltar)
+| Columna POSBerry     | Para qué la usa la app |
+|----------------------|------------------------|
+| `Codigo de Barras`   | **EAN**: identifica el producto y linkea la foto |
+| `*Descripcion`       | Nombre del producto (se muestra tal cual) |
+| `*Precio de Venta`   | **Precio** (de lista) |
+| `Familia`            | **Descuento** como fracción: `0.3` = 30% off (vacío = sin oferta) |
+| `CUIT Proveedor`     | Asigna el **stand** (ver pestaña Stands) |
 
-| Código de barras | Descripción          | Precio | Precio anterior | Oferta | Stand | Foto        | Stock |
-|------------------|----------------------|--------|-----------------|--------|-------|-------------|-------|
-| 7791000000017    | Ibuprofeno 400mg x10 | 3500   | 4500            |        | 1     | ibu.jpg     | 20    |
-| 7791000000024    | Shampoo 400ml        | 2100   |                 | 2x1    | 2     |             |       |
+- Con descuento en `Familia`: la app muestra el precio de lista **tachado**, el
+  precio con descuento (`Precio de Venta × (1 − 0.3)`) y el badge **-X%**.
+- Se publican **todos** los productos del archivo. No se usa stock.
+- El código que importa es **`Codigo de Barras`** (EAN), no `*Codigo` (interno).
 
-- **Precio anterior**: opcional; se muestra tachado y genera el badge `-X%`
-  (solo si es mayor al precio).
-- **Oferta**: opcional; etiqueta libre (`2x1`, `Combo`, `Lanzamiento`). Si hay
-  descuento de precio, el badge muestra el `-X%`; la etiqueta se usa cuando no
-  hay baja de precio.
-- **Foto** y **Stock**: opcionales. La foto puede ser una URL completa o solo
-  el nombre del archivo (ver "Imágenes" abajo).
-- Los encabezados toleran variantes (mayúsculas, acentos, "EAN", "Nº de stand").
+### Pestaña `Stands` — mapeo por CUIT
+
+| Stand | Proveedor            | CUIT          |
+|-------|----------------------|---------------|
+| 8     | Cuenca               | 20111111125   |
+| 6     | Beauty Solutions…    | 30xxxxxxxx x  |
+
+- Cada producto se asigna a su stand haciendo **match del `CUIT Proveedor`**
+  (del archivo POSBerry) contra la columna `CUIT` de esta pestaña.
+- Si un mismo CUIT quedara asignado a varios stands, gana el de **número menor**.
+- Plantilla con los 56 stands: `data-src/stands.csv` (completá la columna CUIT).
+
+> **Formato propio (alternativa).** La ingesta también acepta el formato simple
+> (`Código de barras, Descripción, Precio, Stand` + opcionales `Precio anterior,
+> Oferta, Foto, Stock`); se usa automáticamente si la planilla **no** tiene
+> columna CUIT. Sirve para pruebas o carga manual.
 
 ## 2. Publicar cada pestaña como CSV
 
@@ -88,6 +107,9 @@ propiedades del script.
 4. En 2–3 min los precios están online. El reporte completo de la ingesta
    (filas descartadas y por qué) queda en la pestaña **Actions** del repo, en
    el resumen del run "Publicar precios".
+5. **Para facturar en POSBerry**: en la pestaña `Productos`, **Archivo →
+   Descargar → Microsoft Excel (.xlsx)** y subí ese archivo a POSBerry. Es el
+   mismo contenido que ves en la web; editás en un solo lugar.
 
 ## Imágenes
 

@@ -28,7 +28,9 @@ import {
 import path from "path";
 import {
   ALIAS_PRODUCTOS,
+  ALIAS_PRODUCTOS_POSBERRY,
   ALIAS_STANDS,
+  esFormatoPosberry,
   generarSalidas,
   mapearColumnas,
   procesarProductos,
@@ -168,26 +170,47 @@ async function main() {
     }
   }
 
+  // ---------- Productos: detectar formato ----------
+  const hojaProd = await leerHoja(productosPath);
+  const posberry = esFormatoPosberry(hojaProd.headers);
+  if (posberry) {
+    console.log(
+      "ℹ Formato POSBerry detectado (stand por CUIT, descuento en columna «Familia»).\n"
+    );
+  }
+
   // ---------- Stands ----------
   const hojaStands = await leerHoja(standsPath);
-  const colStands = mapearColumnas(hojaStands.headers, ALIAS_STANDS);
+  const colStands = mapearColumnas(
+    hojaStands.headers,
+    ALIAS_STANDS,
+    posberry ? ["stand", "proveedor", "cuit"] : undefined
+  );
   if (colStands.faltantes.length > 0) {
     console.error(
       `✖ ${standsPath}: faltan columnas requeridas: ${colStands.faltantes.join(", ")}`
     );
+    if (posberry && colStands.faltantes.includes("cuit")) {
+      console.error(
+        "  El formato POSBerry asigna el stand por CUIT: la tabla de stands necesita una columna «CUIT»."
+      );
+    }
     console.error(`  Encabezados encontrados: ${hojaStands.headers.join(" | ")}`);
     process.exit(2);
   }
+  const colS = (nombre: string, v: unknown[]) =>
+    colStands.mapa.has(nombre) ? v[colStands.mapa.get(nombre)!] : undefined;
   const filasStands: FilaCrudaStand[] = hojaStands.filas.map((v, i) => ({
     fila: i + 2, // +2: 1-indexado y salteamos el header
     stand: v[colStands.mapa.get("stand")!],
     proveedor: v[colStands.mapa.get("proveedor")!],
+    cuit: colS("cuit", v),
   }));
-  const { stands, errores: erroresStands } = procesarStands(filasStands);
+  const { stands, errores: erroresStands, cuitToStand } = procesarStands(filasStands);
 
   // ---------- Productos ----------
-  const hojaProd = await leerHoja(productosPath);
-  const colProd = mapearColumnas(hojaProd.headers, ALIAS_PRODUCTOS);
+  const alias = posberry ? ALIAS_PRODUCTOS_POSBERRY : ALIAS_PRODUCTOS;
+  const colProd = mapearColumnas(hojaProd.headers, alias);
   if (colProd.faltantes.length > 0) {
     console.error(
       `✖ ${productosPath}: faltan columnas requeridas: ${colProd.faltantes.join(", ")}`
@@ -202,15 +225,18 @@ async function main() {
     codigo: v[colProd.mapa.get("codigo")!],
     descripcion: v[colProd.mapa.get("descripcion")!],
     precio: v[colProd.mapa.get("precio")!],
-    stand: v[colProd.mapa.get("stand")!],
+    stand: col("stand", v),
     foto: col("foto", v),
     stock: col("stock", v),
     precioAnterior: col("precioAnterior", v),
     oferta: col("oferta", v),
+    cuit: col("cuit", v),
+    descuento: col("descuento", v),
   }));
   const resultado = procesarProductos(filasProd, stands, {
     imageBase: process.env.IMAGE_BASE_URL,
     fotoPorCodigo: construirResolverFotos(),
+    cuitToStand: posberry ? cuitToStand : undefined,
   });
 
   // ---------- Reporte ----------

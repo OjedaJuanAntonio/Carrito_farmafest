@@ -25,6 +25,14 @@ export interface FilaCruda {
   stock?: unknown;
   precioAnterior?: unknown;
   oferta?: unknown;
+  /** CUIT del proveedor (formato POSBerry): resuelve el stand vía cuitToStand. */
+  cuit?: unknown;
+  /**
+   * Descuento como fracción (formato POSBerry, columna "Familia"): 0.3 = 30%.
+   * Si se aplica, el precio de la fila se toma como precio de lista y el precio
+   * mostrado pasa a ser precio × (1 − descuento).
+   */
+  descuento?: unknown;
 }
 
 /** Config opcional del procesamiento de productos. */
@@ -40,12 +48,21 @@ export interface OpcionesProductos {
    * Lo arma la ingesta escaneando public/img/productos/<codigo>.<ext>.
    */
   fotoPorCodigo?: (codigo: string) => string | undefined;
+  /**
+   * Mapa CUIT normalizado → nº de stand (formato POSBerry). Si está presente,
+   * el stand de cada producto se resuelve por su CUIT (no por columna Stand).
+   * Si un CUIT quedó asociado a varios stands, gana el de número menor
+   * (ver procesarStands).
+   */
+  cuitToStand?: Map<string, number>;
 }
 
 export interface FilaCrudaStand {
   fila: number;
   stand?: unknown;
   proveedor?: unknown;
+  /** CUIT del proveedor (opcional; habilita el match por CUIT en productos). */
+  cuit?: unknown;
 }
 
 export interface Problema {
@@ -124,14 +141,39 @@ function parsearEnteroPositivo(v: unknown): number | null {
   return n;
 }
 
+/** Deja solo los dígitos de un CUIT ("20-11111112-5" → "20111111125"). */
+export function normalizarCuit(v: unknown): string {
+  return celdaTexto(v).replace(/\D/g, "");
+}
+
+/**
+ * Parsea el descuento de la columna "Familia" de POSBerry a una fracción.
+ * Acepta "0,3" o "0.3" (30%). Convención: valores en (0,1) son fracción;
+ * un valor ≥1 y <100 se interpreta como porcentaje (30 → 0,30).
+ * Devuelve: 0 = sin descuento; un número en (0,1) = fracción; null = inválido.
+ */
+export function parsearDescuento(v: unknown): number | null {
+  const s = celdaTexto(v);
+  if (!s) return 0;
+  const n = parsearPrecio(s); // reusa el parseo de coma/punto decimal
+  if (!Number.isFinite(n)) return null;
+  if (n <= 0) return 0;
+  const frac = n < 1 ? n : n / 100;
+  if (frac <= 0 || frac >= 1) return null;
+  return frac;
+}
+
 // ---------- Procesamiento de stands ----------
 
 export function procesarStands(filas: FilaCrudaStand[]): {
   stands: Stand[];
   errores: Problema[];
+  /** CUIT normalizado → nº de stand (menor, si un CUIT figura en varios). */
+  cuitToStand: Map<string, number>;
 } {
   const stands: Stand[] = [];
   const errores: Problema[] = [];
+  const cuitToStand = new Map<string, number>();
   const vistos = new Map<number, number>(); // id → fila
 
   for (const f of filas) {
@@ -163,9 +205,16 @@ export function procesarStands(filas: FilaCrudaStand[]): {
     }
     vistos.set(id, f.fila);
     stands.push({ id, proveedor });
+
+    // Mapa CUIT→stand: si un CUIT aparece en más de un stand, gana el menor.
+    const cuit = normalizarCuit(f.cuit);
+    if (cuit) {
+      const prev = cuitToStand.get(cuit);
+      if (prev === undefined || id < prev) cuitToStand.set(cuit, id);
+    }
   }
   stands.sort((a, b) => a.id - b.id);
-  return { stands, errores };
+  return { stands, errores, cuitToStand };
 }
 
 // ---------- Procesamiento de productos ----------
@@ -226,14 +275,34 @@ export function procesarProductos(
       });
       continue;
     }
-    const standId = Number(standRaw);
-    if (!Number.isInteger(standId) || !standIds.has(standId)) {
-      errores.push({
-        fila: f.fila,
-        motivo: `stand «${standRaw}» inexistente (no figura en la tabla de stands)`,
-        contexto: descripcion,
-      });
-      continue;
+    // Stand: por CUIT (formato POSBerry) o por columna Stand (formato propio).
+    let standId: number;
+    if (opciones.cuitToStand) {
+      const cuit = normalizarCuit(f.cuit);
+      if (!cuit) {
+        errores.push({ fila: f.fila, motivo: `producto ${codigo} sin CUIT`, contexto: descripcion });
+        continue;
+      }
+      const sid = opciones.cuitToStand.get(cuit);
+      if (sid === undefined) {
+        errores.push({
+          fila: f.fila,
+          motivo: `CUIT ${cuit} sin stand asignado (no figura en la tabla de stands)`,
+          contexto: descripcion,
+        });
+        continue;
+      }
+      standId = sid;
+    } else {
+      standId = Number(standRaw);
+      if (!Number.isInteger(standId) || !standIds.has(standId)) {
+        errores.push({
+          fila: f.fila,
+          motivo: `stand «${standRaw}» inexistente (no figura en la tabla de stands)`,
+          contexto: descripcion,
+        });
+        continue;
+      }
     }
 
     const producto: Product = {
@@ -242,6 +311,22 @@ export function procesarProductos(
       precio: Math.round(precio * 100) / 100,
       stand: standId,
     };
+
+    // Descuento (columna "Familia" de POSBerry): el precio de la fila es el de
+    // lista; el mostrado pasa a precio × (1 − descuento), con centavos.
+    if (celdaTexto(f.descuento) !== "") {
+      const d = parsearDescuento(f.descuento);
+      if (d === null) {
+        advertencias.push({
+          fila: f.fila,
+          motivo: `descuento «${celdaTexto(f.descuento)}» inválido; se ignora`,
+          contexto: descripcion,
+        });
+      } else if (d > 0) {
+        producto.precioAnterior = producto.precio;
+        producto.precio = Math.round(producto.precio * (1 - d) * 100) / 100;
+      }
+    }
 
     // EAN-13 con checksum incorrecto: se acepta (puede ser código interno),
     // pero se avisa por si es un error de tipeo.
@@ -419,11 +504,28 @@ const ALIAS_PRODUCTOS: Record<string, readonly string[]> = {
 const ALIAS_STANDS: Record<string, readonly string[]> = {
   stand: ["stand", "numerodestand", "nrostand", "numstand", "numero", "nro"],
   proveedor: ["proveedor", "nombre", "razonsocial", "empresa"],
+  cuit: ["cuit", "cuitproveedor", "cuitprov"],
+};
+
+/**
+ * Alias para el formato de importación de POSBerry. Diferencias clave con el
+ * formato propio: el código de barras es "Codigo de Barras" (NO "*Codigo", que
+ * es el código interno), el precio es "Precio de Venta", el descuento viene en
+ * "Familia" (campo reutilizado) y el stand se resuelve por "CUIT Proveedor".
+ */
+const ALIAS_PRODUCTOS_POSBERRY: Record<string, readonly string[]> = {
+  codigo: ["codigodebarras", "codigobarras", "codigodebarras1"],
+  descripcion: ["descripcion", "producto", "detalle", "nombre"],
+  precio: ["preciodeventa", "precioventa", "pvp"],
+  cuit: ["cuitproveedor", "cuit", "cuitprov"],
+  descuento: ["familia", "descuento"],
+  foto: ["urldelaimagen", "urlimagen", "foto", "imagen"],
 };
 
 export function mapearColumnas(
   headers: string[],
-  alias: Record<string, readonly string[]>
+  alias: Record<string, readonly string[]>,
+  requeridos?: readonly string[]
 ): { mapa: Map<string, number>; faltantes: string[] } {
   const mapa = new Map<string, number>();
   headers.forEach((h, idx) => {
@@ -435,10 +537,24 @@ export function mapearColumnas(
       }
     }
   });
-  const requeridos =
-    alias === ALIAS_STANDS ? ["stand", "proveedor"] : ["codigo", "descripcion", "precio", "stand"];
-  const faltantes = requeridos.filter((c) => !mapa.has(c));
+  const req =
+    requeridos ??
+    (alias === ALIAS_STANDS
+      ? ["stand", "proveedor"]
+      : alias === ALIAS_PRODUCTOS_POSBERRY
+        ? ["codigo", "descripcion", "precio", "cuit"]
+        : ["codigo", "descripcion", "precio", "stand"]);
+  const faltantes = req.filter((c) => !mapa.has(c));
   return { mapa, faltantes };
 }
 
-export { ALIAS_PRODUCTOS, ALIAS_STANDS };
+/** ¿Los encabezados corresponden al formato de POSBerry? (tienen CUIT). */
+export function esFormatoPosberry(headers: string[]): boolean {
+  const set = new Set(headers.map(normalizarHeader));
+  const tieneCuit = set.has("cuitproveedor") || set.has("cuit");
+  const tieneVenta = set.has("preciodeventa");
+  const tieneEan = set.has("codigodebarras") || set.has("codigobarras");
+  return tieneCuit && (tieneVenta || tieneEan);
+}
+
+export { ALIAS_PRODUCTOS, ALIAS_STANDS, ALIAS_PRODUCTOS_POSBERRY };

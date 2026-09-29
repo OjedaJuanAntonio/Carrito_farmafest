@@ -95,42 +95,54 @@ function chequearPlanilla() {
   );
 }
 
+/** Normaliza un encabezado: minúsculas, sin acentos, solo letras/números. */
+function normHead_(h) {
+  return String(h)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]/g, '');
+}
+
 /**
- * Pre-chequeo rápido de la pestaña Productos. Espejo liviano de las reglas
- * de la ingesta (código 6–14 dígitos, sin duplicados, descripción y precio
- * válidos). No pretende ser exhaustivo.
+ * Pre-chequeo de la pestaña Productos. Detecta el formato:
+ *  - POSBerry (tiene columna CUIT): valida por CUIT + descuento en "Familia".
+ *  - Propio (tiene columna Stand): valida por Stand.
+ * Espejo liviano de la ingesta (la validación final la hace la ingesta).
  */
 function validar_() {
-  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA_PRODUCTOS);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(HOJA_PRODUCTOS);
   if (!sh) return ['No existe la pestaña "' + HOJA_PRODUCTOS + '".'];
   var data = sh.getDataRange().getValues();
   if (data.length < 2) return ['La pestaña "' + HOJA_PRODUCTOS + '" está vacía.'];
 
-  var head = data[0].map(function (h) {
-    return String(h).toLowerCase();
-  });
-  var find = function (fn) {
-    for (var i = 0; i < head.length; i++) if (fn(head[i])) return i;
+  var head = data[0].map(normHead_);
+  var idxOf = function (variantes) {
+    for (var i = 0; i < head.length; i++)
+      if (variantes.indexOf(head[i]) >= 0) return i;
     return -1;
   };
-  var iCod = find(function (h) {
-    return h.indexOf('barra') >= 0 || h.indexOf('codigo') >= 0 || h.indexOf('código') >= 0;
-  });
-  var iDesc = find(function (h) {
-    return h.indexOf('descrip') >= 0 || h.indexOf('producto') >= 0 || h.indexOf('nombre') >= 0;
-  });
-  var iPrecio = find(function (h) {
-    return h === 'precio' || h.indexOf('venta') >= 0 || h.indexOf('pvp') >= 0;
-  });
-  var iStand = find(function (h) {
-    return h.indexOf('stand') >= 0;
-  });
+
+  var iCuit = idxOf(['cuitproveedor', 'cuit', 'cuitprov']);
+  var posberry = iCuit >= 0;
+
+  // El EAN es "Codigo de Barras" (no "*Codigo" interno).
+  var iCod = idxOf(['codigodebarras', 'codigobarras', 'ean', 'codbarras']);
+  if (iCod < 0 && !posberry) iCod = idxOf(['codigo']); // formato propio
+  var iDesc = idxOf(['descripcion', 'producto', 'nombre', 'detalle']);
+  var iPrecio = idxOf(['preciodeventa', 'precio', 'precioventa', 'pvp']);
+  var iStand = idxOf(['stand', 'numerodestand', 'nrostand']);
+  var iFamilia = idxOf(['familia', 'descuento']);
 
   var faltan = [];
   if (iCod < 0) faltan.push('código de barras');
   if (iDesc < 0) faltan.push('descripción');
-  if (iPrecio < 0) faltan.push('precio');
-  if (iStand < 0) faltan.push('stand');
+  if (iPrecio < 0) faltan.push(posberry ? 'precio de venta' : 'precio');
+  if (posberry) {
+    if (iCuit < 0) faltan.push('CUIT Proveedor');
+  } else if (iStand < 0) {
+    faltan.push('stand');
+  }
   if (faltan.length) return ['Faltan columnas: ' + faltan.join(', ')];
 
   var problemas = [];
@@ -140,8 +152,9 @@ function validar_() {
     var cod = String(data[r][iCod] || '').trim();
     var desc = String(data[r][iDesc] || '').trim();
     var precio = String(data[r][iPrecio] || '').trim();
-    var stand = String(data[r][iStand] || '').trim();
-    if (!cod && !desc && !precio && !stand) continue; // fila vacía
+    var stand = iStand >= 0 ? String(data[r][iStand] || '').trim() : '';
+    var cuit = iCuit >= 0 ? String(data[r][iCuit] || '').replace(/\D/g, '') : '';
+    if (!cod && !desc && !precio && !stand && !cuit) continue; // fila vacía
 
     if (!cod) problemas.push('Fila ' + fila + ': falta código de barras');
     else if (!/^\d{6,14}$/.test(cod))
@@ -155,6 +168,19 @@ function validar_() {
     var num = Number(precio.replace(/[$\s.]/g, '').replace(',', '.'));
     if (precio && (!isFinite(num) || num <= 0))
       problemas.push('Fila ' + fila + ': precio inválido «' + precio + '»');
+
+    if (posberry && !cuit)
+      problemas.push('Fila ' + fila + ': falta CUIT (no se puede asignar el stand)');
+
+    // Descuento (Familia): si viene, debe ser una fracción 0–1 (ej. 0.3 = 30%).
+    if (iFamilia >= 0) {
+      var famRaw = String(data[r][iFamilia] || '').trim();
+      if (famRaw) {
+        var fam = Number(famRaw.replace(',', '.'));
+        if (!isFinite(fam) || fam < 0 || fam >= 1)
+          problemas.push('Fila ' + fila + ': descuento inválido «' + famRaw + '» (usá una fracción, ej. 0.3 = 30%)');
+      }
+    }
   }
   return problemas;
 }
