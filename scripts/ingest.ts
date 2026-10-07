@@ -27,17 +27,21 @@ import {
 } from "fs";
 import path from "path";
 import {
+  ALIAS_FAMILIAS,
   ALIAS_PRODUCTOS,
   ALIAS_PRODUCTOS_POSBERRY,
   ALIAS_STANDS,
   esFormatoPosberry,
   generarSalidas,
   mapearColumnas,
+  procesarFamilias,
   procesarProductos,
   procesarStands,
   type FilaCruda,
+  type FilaCrudaFamilia,
   type FilaCrudaStand,
   type Problema,
+  type ReglaFamilia,
 } from "./lib/ingesta";
 import { parseCsv } from "./lib/csv";
 
@@ -158,6 +162,10 @@ async function main() {
     "stands",
     process.env.SHEET_STANDS_URL || path.join("data-src", "stands.xlsx")
   );
+  const familiasPath = arg(
+    "familias",
+    process.env.SHEET_FAMILIAS_URL || path.join("data-src", "familias.csv")
+  );
   const outDir = arg("out", path.join("public", "data"));
 
   for (const p of [productosPath, standsPath]) {
@@ -208,6 +216,46 @@ async function main() {
   }));
   const { stands, errores: erroresStands, cuitToStand } = procesarStands(filasStands);
 
+  // ---------- Familias (solo formato POSBerry) ----------
+  // La mecánica de cada oferta (porcentaje, 2x1, 2do al N%) sale de esta tabla,
+  // no del archivo de productos (que solo trae el NOMBRE de la familia).
+  let familias: Map<string, ReglaFamilia> | undefined;
+  let erroresFamilias: Problema[] = [];
+  if (posberry) {
+    if (esUrl(familiasPath) || existsSync(familiasPath)) {
+      const hojaFam = await leerHoja(familiasPath);
+      const colFam = mapearColumnas(hojaFam.headers, ALIAS_FAMILIAS, ["familia"]);
+      if (colFam.faltantes.length > 0) {
+        console.error(
+          `✖ ${familiasPath}: faltan columnas requeridas: ${colFam.faltantes.join(", ")}`
+        );
+        console.error(`  Encabezados encontrados: ${hojaFam.headers.join(" | ")}`);
+        process.exit(2);
+      }
+      const colF = (nombre: string, v: unknown[]) =>
+        colFam.mapa.has(nombre) ? v[colFam.mapa.get(nombre)!] : undefined;
+      const filasFam: FilaCrudaFamilia[] = hojaFam.filas.map((v, i) => ({
+        fila: i + 2,
+        familia: v[colFam.mapa.get("familia")!],
+        tipo: colF("tipo", v),
+        valor: colF("valor", v),
+        etiqueta: colF("etiqueta", v),
+      }));
+      const rf = procesarFamilias(filasFam);
+      familias = rf.familias;
+      erroresFamilias = rf.errores;
+      console.log(
+        `ℹ Familias cargadas: ${familias.size} (desde ${familiasPath}).\n`
+      );
+    } else {
+      familias = new Map();
+      console.warn(
+        `⚠ Formato POSBerry sin tabla de familias (${familiasPath}): los productos se publican SIN ofertas. ` +
+          "Creá data-src/familias.csv (Familia, Tipo, Valor, Etiqueta) para aplicar las promos.\n"
+      );
+    }
+  }
+
   // ---------- Productos ----------
   const alias = posberry ? ALIAS_PRODUCTOS_POSBERRY : ALIAS_PRODUCTOS;
   const colProd = mapearColumnas(hojaProd.headers, alias);
@@ -231,12 +279,13 @@ async function main() {
     precioAnterior: col("precioAnterior", v),
     oferta: col("oferta", v),
     cuit: col("cuit", v),
-    descuento: col("descuento", v),
+    familia: col("familia", v),
   }));
   const resultado = procesarProductos(filasProd, stands, {
     imageBase: process.env.IMAGE_BASE_URL,
     fotoPorCodigo: construirResolverFotos(),
     cuitToStand: posberry ? cuitToStand : undefined,
+    familias: posberry ? familias : undefined,
   });
 
   // ---------- Reporte ----------
@@ -249,6 +298,7 @@ async function main() {
   log(`Ingesta Farmafest — ${new Date().toLocaleString("es-AR")}`);
   log("");
   log(`Stands:    ${filasStands.length} filas leídas → ${stands.length} válidos`);
+  if (familias) log(`Familias:  ${familias.size} cargadas`);
   log(
     `Productos: ${filasProd.length} filas leídas → ${resultado.productos.length} válidos`
   );
@@ -265,6 +315,7 @@ async function main() {
   };
 
   dump("✖ ERRORES en stands (filas descartadas)", erroresStands, "stands");
+  dump("✖ ERRORES en familias (filas ignoradas)", erroresFamilias, "familias");
   dump("✖ ERRORES en productos (filas descartadas)", resultado.errores, "productos");
   dump("⚠ Advertencias (filas aceptadas)", resultado.advertencias, "productos");
 

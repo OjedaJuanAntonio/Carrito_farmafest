@@ -28,11 +28,12 @@ export interface FilaCruda {
   /** CUIT del proveedor (formato POSBerry): resuelve el stand vía cuitToStand. */
   cuit?: unknown;
   /**
-   * Descuento como fracción (formato POSBerry, columna "Familia"): 0.3 = 30%.
-   * Si se aplica, el precio de la fila se toma como precio de lista y el precio
-   * mostrado pasa a ser precio × (1 − descuento).
+   * Nombre de la familia de POSBerry (columna "Familia"): p. ej. "40%", "2X1",
+   * "2DO70%". El precio de la fila es SIEMPRE el precio regular; la mecánica
+   * (porcentaje, 2x1, 2do al N%) sale de la tabla de familias (ver
+   * `procesarFamilias`), no de este campo.
    */
-  descuento?: unknown;
+  familia?: unknown;
 }
 
 /** Config opcional del procesamiento de productos. */
@@ -55,6 +56,12 @@ export interface OpcionesProductos {
    * (ver procesarStands).
    */
   cuitToStand?: Map<string, number>;
+  /**
+   * Tabla de familias (formato POSBerry): nombre de familia normalizado → regla
+   * de oferta. Define cómo se calcula el precio mostrado a partir del precio
+   * regular de la fila (ver `procesarFamilias` y `aplicarFamilia`).
+   */
+  familias?: Map<string, ReglaFamilia>;
 }
 
 export interface FilaCrudaStand {
@@ -147,20 +154,192 @@ export function normalizarCuit(v: unknown): string {
 }
 
 /**
- * Parsea el descuento de la columna "Familia" de POSBerry a una fracción.
- * Acepta "0,3" o "0.3" (30%). Convención: valores en (0,1) son fracción;
- * un valor ≥1 y <100 se interpreta como porcentaje (30 → 0,30).
- * Devuelve: 0 = sin descuento; un número en (0,1) = fracción; null = inválido.
+ * Convierte un valor de descuento a fracción (0,1). Acepta "0.4", "0,4", "40"
+ * y "40%". Convención: un valor en (0,1) ya es fracción; ≥1 y <100 se toma como
+ * porcentaje (40 → 0,40). Devuelve null si no es un descuento válido o viene
+ * vacío (a diferencia del precio, acá "sin valor" no es 0 sino "no aplica").
  */
-export function parsearDescuento(v: unknown): number | null {
-  const s = celdaTexto(v);
-  if (!s) return 0;
+export function aFraccion(v: unknown): number | null {
+  const s = celdaTexto(v).replace(/%/g, "");
+  if (!s) return null;
   const n = parsearPrecio(s); // reusa el parseo de coma/punto decimal
-  if (!Number.isFinite(n)) return null;
-  if (n <= 0) return 0;
+  if (!Number.isFinite(n) || n <= 0) return null;
   const frac = n < 1 ? n : n / 100;
   if (frac <= 0 || frac >= 1) return null;
   return frac;
+}
+
+// ---------- Familias (mecánica de oferta, formato POSBerry) ----------
+
+/**
+ * Tipo de mecánica de una familia de POSBerry:
+ *  - PORCENTAJE: N% off → precio = regular × (1 − valor), con precio regular tachado.
+ *  - 2X1:        precio = regular ÷ 2 (por unidad, "c/u"), con regular tachado.
+ *  - SEGUNDO:    "2do al N%" → NO cambia el precio ni tacha; solo badge informativo.
+ *  - NINGUNA:    sin oferta.
+ */
+export type TipoFamilia = "PORCENTAJE" | "2X1" | "SEGUNDO" | "NINGUNA";
+
+/** Regla de oferta de una familia, ya interpretada. */
+export interface ReglaFamilia {
+  /** Nombre de familia normalizado (clave de búsqueda). */
+  familia: string;
+  tipo: TipoFamilia;
+  /** Fracción de descuento (0,1): obligatoria en PORCENTAJE; informativa en SEGUNDO. */
+  valor?: number;
+  /** Texto del badge a mostrar (si no viene, se deriva del tipo). */
+  etiqueta?: string;
+}
+
+/** Fila cruda de la tabla de familias (CSV/planilla de config). */
+export interface FilaCrudaFamilia {
+  fila: number;
+  familia?: unknown;
+  /** Tipo explícito (PORCENTAJE / 2X1 / SEGUNDO / NINGUNA). Si falta, se infiere del nombre. */
+  tipo?: unknown;
+  /** Valor del descuento (0.40, 40, 40%). Si falta, se infiere del nombre cuando se puede. */
+  valor?: unknown;
+  /** Etiqueta/badge opcional. */
+  etiqueta?: unknown;
+}
+
+/** Normaliza el nombre de una familia para matchear ("2do 70%" → "2DO70%"). */
+export function normalizarFamilia(v: unknown): string {
+  return celdaTexto(v).toUpperCase().replace(/\s+/g, "");
+}
+
+/** Deriva la etiqueta de un "2do al N%" a partir de la fracción. */
+function etiquetaSegundo(frac: number | null | undefined): string {
+  return frac ? `2do al ${Math.round(frac * 100)}%` : "2da unidad";
+}
+
+/**
+ * Intenta clasificar una familia por su NOMBRE (fallback cuando no hay columna
+ * Tipo). Reconoce "N%", "2X1" y "2do al N%". Devuelve null si no puede.
+ */
+function inferirDesdeNombre(nombre: string, etiqueta?: string): ReglaFamilia | null {
+  const key = normalizarFamilia(nombre);
+  const s = nombre.trim();
+  if (/2\s*d[oa]/i.test(s)) {
+    const m = s.match(/(\d+(?:[.,]\d+)?)\s*%/);
+    const frac = m ? aFraccion(m[1]) : null;
+    return { familia: key, tipo: "SEGUNDO", valor: frac ?? undefined, etiqueta: etiqueta ?? etiquetaSegundo(frac) };
+  }
+  if (/^2\s*[x×]\s*1$/i.test(s)) {
+    return { familia: key, tipo: "2X1", etiqueta: etiqueta ?? "2x1" };
+  }
+  const mPct = s.match(/^(\d+(?:[.,]\d+)?)\s*%$/);
+  if (mPct) {
+    const frac = aFraccion(mPct[1]);
+    if (frac) return { familia: key, tipo: "PORCENTAJE", valor: frac, etiqueta };
+  }
+  return null;
+}
+
+/**
+ * Clasifica una familia usando la columna Tipo si viene; si no, infiere del
+ * nombre. Devuelve null si no se puede determinar (familia inválida).
+ */
+function clasificarFamilia(
+  nombre: string,
+  tipoRaw: string,
+  valorRaw: string,
+  etiqueta?: string
+): ReglaFamilia | null {
+  const key = normalizarFamilia(nombre);
+  const valor = valorRaw ? aFraccion(valorRaw) : null;
+  const t = tipoRaw.toUpperCase().normalize("NFKD").replace(/[^A-Z0-9]/g, "");
+
+  if (["PORCENTAJE", "PCT", "DESCUENTO", "PORCIENTO", "OFF"].includes(t)) {
+    return { familia: key, tipo: "PORCENTAJE", valor: valor ?? inferirDesdeNombre(nombre)?.valor, etiqueta };
+  }
+  if (["2X1", "DOSPORUNO"].includes(t)) {
+    return { familia: key, tipo: "2X1", etiqueta: etiqueta ?? "2x1" };
+  }
+  if (["SEGUNDO", "2DO", "SEGUNDAUNIDAD", "2DAUNIDAD", "2DA"].includes(t)) {
+    return { familia: key, tipo: "SEGUNDO", valor: valor ?? inferirDesdeNombre(nombre)?.valor, etiqueta: etiqueta ?? etiquetaSegundo(valor ?? inferirDesdeNombre(nombre)?.valor) };
+  }
+  if (["NINGUNA", "SIN", "NONE", "NO"].includes(t)) {
+    return { familia: key, tipo: "NINGUNA" };
+  }
+  // Sin tipo (o tipo no reconocido): inferir del nombre.
+  return inferirDesdeNombre(nombre, etiqueta);
+}
+
+/**
+ * Procesa la tabla de familias a un mapa nombre-normalizado → regla. Las filas
+ * que no se pueden clasificar quedan como errores (no frenan la publicación: el
+ * producto que use esa familia se publica sin oferta, con advertencia).
+ */
+export function procesarFamilias(filas: FilaCrudaFamilia[]): {
+  familias: Map<string, ReglaFamilia>;
+  errores: Problema[];
+} {
+  const familias = new Map<string, ReglaFamilia>();
+  const errores: Problema[] = [];
+  for (const f of filas) {
+    const nombre = celdaTexto(f.familia);
+    if (!nombre) continue; // fila vacía
+    const regla = clasificarFamilia(
+      nombre,
+      celdaTexto(f.tipo),
+      celdaTexto(f.valor),
+      celdaTexto(f.etiqueta) || undefined
+    );
+    if (!regla) {
+      errores.push({
+        fila: f.fila,
+        motivo: `familia «${nombre}»: no se pudo determinar la mecánica (completá la columna Tipo)`,
+      });
+      continue;
+    }
+    if (regla.tipo === "PORCENTAJE" && !regla.valor) {
+      errores.push({ fila: f.fila, motivo: `familia «${nombre}» de tipo PORCENTAJE sin % de descuento` });
+      continue;
+    }
+    familias.set(regla.familia, regla);
+  }
+  return { familias, errores };
+}
+
+/**
+ * Aplica la regla de familia a un producto ya validado. El `producto.precio`
+ * entra como precio REGULAR y sale ajustado según la mecánica.
+ */
+function aplicarFamilia(
+  producto: Product,
+  regla: ReglaFamilia,
+  fila: number,
+  contexto: string,
+  advertencias: Problema[]
+): void {
+  switch (regla.tipo) {
+    case "PORCENTAJE": {
+      if (!regla.valor) {
+        advertencias.push({ fila, motivo: `familia «${regla.familia}» sin % de descuento; se ignora`, contexto });
+        return;
+      }
+      producto.precioAnterior = producto.precio;
+      producto.precio = Math.round(producto.precio * (1 - regla.valor) * 100) / 100;
+      // El badge "-N%" lo calcula la UI desde precioAnterior; si hay etiqueta, la usa.
+      if (regla.etiqueta) producto.oferta = regla.etiqueta;
+      return;
+    }
+    case "2X1": {
+      producto.precioAnterior = producto.precio;
+      producto.precio = Math.round((producto.precio / 2) * 100) / 100;
+      producto.oferta = regla.etiqueta ?? "2x1";
+      return;
+    }
+    case "SEGUNDO": {
+      // No cambia el precio ni tacha: solo muestra la mecánica como badge.
+      producto.oferta = regla.etiqueta ?? etiquetaSegundo(regla.valor);
+      return;
+    }
+    case "NINGUNA":
+    default:
+      return;
+  }
 }
 
 // ---------- Procesamiento de stands ----------
@@ -312,19 +491,19 @@ export function procesarProductos(
       stand: standId,
     };
 
-    // Descuento (columna "Familia" de POSBerry): el precio de la fila es el de
-    // lista; el mostrado pasa a precio × (1 − descuento), con centavos.
-    if (celdaTexto(f.descuento) !== "") {
-      const d = parsearDescuento(f.descuento);
-      if (d === null) {
+    // Oferta por familia (formato POSBerry): el precio de la fila es el REGULAR;
+    // la mecánica (porcentaje, 2x1, 2do al N%) sale de la tabla de familias.
+    const nombreFamilia = celdaTexto(f.familia);
+    if (nombreFamilia !== "" && opciones.familias) {
+      const regla = opciones.familias.get(normalizarFamilia(nombreFamilia));
+      if (!regla) {
         advertencias.push({
           fila: f.fila,
-          motivo: `descuento «${celdaTexto(f.descuento)}» inválido; se ignora`,
+          motivo: `familia «${nombreFamilia}» no está en la tabla de familias; se publica sin oferta`,
           contexto: descripcion,
         });
-      } else if (d > 0) {
-        producto.precioAnterior = producto.precio;
-        producto.precio = Math.round(producto.precio * (1 - d) * 100) / 100;
+      } else {
+        aplicarFamilia(producto, regla, f.fila, descripcion, advertencias);
       }
     }
 
@@ -518,8 +697,20 @@ const ALIAS_PRODUCTOS_POSBERRY: Record<string, readonly string[]> = {
   descripcion: ["descripcion", "producto", "detalle", "nombre"],
   precio: ["preciodeventa", "precioventa", "pvp"],
   cuit: ["cuitproveedor", "cuit", "cuitprov"],
-  descuento: ["familia", "descuento"],
+  familia: ["familia"],
   foto: ["urldelaimagen", "urlimagen", "foto", "imagen"],
+};
+
+/**
+ * Alias para la tabla de familias (config de ofertas). Solo `familia` es
+ * obligatoria; `tipo`/`valor`/`etiqueta` son opcionales (se infieren del nombre
+ * cuando se puede).
+ */
+const ALIAS_FAMILIAS: Record<string, readonly string[]> = {
+  familia: ["familia", "nombre", "nombrefamilia"],
+  tipo: ["tipo", "mecanica", "clase"],
+  valor: ["valor", "descuento", "porcentaje", "pct", "porciento"],
+  etiqueta: ["etiqueta", "label", "texto", "badge"],
 };
 
 export function mapearColumnas(
@@ -557,4 +748,4 @@ export function esFormatoPosberry(headers: string[]): boolean {
   return tieneCuit && (tieneVenta || tieneEan);
 }
 
-export { ALIAS_PRODUCTOS, ALIAS_STANDS, ALIAS_PRODUCTOS_POSBERRY };
+export { ALIAS_PRODUCTOS, ALIAS_STANDS, ALIAS_PRODUCTOS_POSBERRY, ALIAS_FAMILIAS };

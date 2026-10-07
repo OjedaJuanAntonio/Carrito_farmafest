@@ -6,8 +6,8 @@
  * Flujo: corrijo el Excel → npm run publish:data → listo.
  *  1. Corre la ingesta (valida y regenera public/data/*).
  *  2. Si hay cambios, commitea SOLO public/data y pushea.
- *  3. Vercel despliega los JSON nuevos (~1 min). La app los levanta en la
- *     próxima carga/revalidación, sin rebuild de código.
+ *  3. Cloudflare Pages despliega los JSON nuevos (~1–2 min). La app los levanta
+ *     en la próxima carga/revalidación, sin rebuild de código.
  *
  * Si la ingesta descarta filas, pide confirmación explícita con --force.
  */
@@ -43,7 +43,7 @@ function main() {
   );
   execSync("git push", { stdio: "inherit" });
   console.log(
-    "\n✔ Publicado. Vercel sirve los datos nuevos en ~1 minuto; la app los toma en la próxima carga (sin redeploy de código)."
+    "\n✔ Publicado. Cloudflare Pages sirve los datos nuevos en ~1–2 minutos; la app los toma en la próxima carga (sin redeploy de código)."
   );
 }
 

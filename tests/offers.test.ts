@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { descuentoPct, ofertaLabel, tieneOferta } from "../src/lib/offers";
+import { descuentoPct, esDosPorUno, ofertaLabel, tieneOferta } from "../src/lib/offers";
 
 describe("descuentoPct", () => {
   it("calcula el porcentaje redondeado", () => {
@@ -14,16 +14,30 @@ describe("descuentoPct", () => {
 });
 
 describe("ofertaLabel", () => {
-  it("prioriza el descuento concreto sobre la etiqueta", () => {
+  it("prioriza la etiqueta explícita sobre el -% calculado", () => {
+    // La mecánica 2x1 baja el precio a la mitad (precioAnterior = regular),
+    // pero el badge debe decir "2x1", no "-50%".
     expect(
-      ofertaLabel({ precio: 700, precioAnterior: 1000, oferta: "Oferta" })
-    ).toBe("-30%");
+      ofertaLabel({ precio: 500, precioAnterior: 1000, oferta: "2x1" })
+    ).toBe("2x1");
+  });
+  it("usa el -% calculado cuando no hay etiqueta", () => {
+    expect(ofertaLabel({ precio: 700, precioAnterior: 1000 })).toBe("-30%");
   });
   it("usa la etiqueta cuando no hay baja de precio", () => {
-    expect(ofertaLabel({ precio: 700, oferta: "2x1" })).toBe("2x1");
+    expect(ofertaLabel({ precio: 700, oferta: "2do al 70%" })).toBe("2do al 70%");
   });
   it("es null sin oferta", () => {
     expect(ofertaLabel({ precio: 700 })).toBeNull();
+  });
+});
+
+describe("esDosPorUno", () => {
+  it("detecta la etiqueta 2x1 (sin importar mayúsculas/espacios)", () => {
+    expect(esDosPorUno({ precio: 500, oferta: "2x1" })).toBe(true);
+    expect(esDosPorUno({ precio: 500, oferta: "2X1" })).toBe(true);
+    expect(esDosPorUno({ precio: 500, oferta: "2do al 70%" })).toBe(false);
+    expect(esDosPorUno({ precio: 500 })).toBe(false);
   });
 });
 

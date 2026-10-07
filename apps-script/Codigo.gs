@@ -132,7 +132,6 @@ function validar_() {
   var iDesc = idxOf(['descripcion', 'producto', 'nombre', 'detalle']);
   var iPrecio = idxOf(['preciodeventa', 'precio', 'precioventa', 'pvp']);
   var iStand = idxOf(['stand', 'numerodestand', 'nrostand']);
-  var iFamilia = idxOf(['familia', 'descuento']);
 
   var faltan = [];
   if (iCod < 0) faltan.push('código de barras');
@@ -172,15 +171,10 @@ function validar_() {
     if (posberry && !cuit)
       problemas.push('Fila ' + fila + ': falta CUIT (no se puede asignar el stand)');
 
-    // Descuento (Familia): si viene, debe ser una fracción 0–1 (ej. 0.3 = 30%).
-    if (iFamilia >= 0) {
-      var famRaw = String(data[r][iFamilia] || '').trim();
-      if (famRaw) {
-        var fam = Number(famRaw.replace(',', '.'));
-        if (!isFinite(fam) || fam < 0 || fam >= 1)
-          problemas.push('Fila ' + fila + ': descuento inválido «' + famRaw + '» (usá una fracción, ej. 0.3 = 30%)');
-      }
-    }
+    // Nota: la columna "Familia" lleva el NOMBRE de la familia (ej. "40%",
+    // "2X1", "2DO70%"), no un número. La mecánica de cada familia se define en
+    // la tabla de familias (data-src/familias.csv); la ingesta valida que cada
+    // familia usada exista allí, así que acá no se chequea su contenido.
   }
   return problemas;
 }

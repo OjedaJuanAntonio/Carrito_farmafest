@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { fetchSearchIndex, fetchStands, formatPrice } from "@/lib/data";
 import { prepareDocs, type SearchDoc } from "@/lib/search";
-import { descuentoPct, tieneOferta } from "@/lib/offers";
+import { descuentoPct, esDosPorUno, tieneOferta } from "@/lib/offers";
 import type { Stand } from "@/lib/types";
 import { OfferBadge } from "./OfferBadge";
 
@@ -125,6 +125,9 @@ function OfertaCard({ doc, proveedor }: { doc: SearchDoc; proveedor: string }) {
         )}
         <p className="text-base font-bold text-brand-dark leading-none mt-0.5">
           {formatPrice(doc.precio)}
+          {esDosPorUno(doc) && (
+            <span className="text-[11px] font-medium text-ink-muted ml-1">c/u</span>
+          )}
         </p>
       </div>
     </Link>

@@ -21,13 +21,25 @@ export function tieneOferta(p: ConOferta): boolean {
 }
 
 /**
- * Texto del badge de oferta. Prioriza el descuento concreto: si hay precio
- * anterior, muestra "-30%" (lo más vendedor y objetivo). Si no hay baja de
- * precio pero sí una etiqueta de mecánica ("2x1", "Combo"), muestra esa.
- * null si no hay oferta.
+ * Texto del badge de oferta. Prioriza la etiqueta EXPLÍCITA de mecánica
+ * ("2x1", "2do al 70%", "Combo"): describe la promo tal como se cobra, que en
+ * mecánicas tipo 2x1 no equivale a un simple "-N%". Si no hay etiqueta pero sí
+ * una baja de precio, muestra el descuento calculado "-30%". null si no hay
+ * oferta.
  */
 export function ofertaLabel(p: ConOferta): string | null {
+  if (p.oferta) return p.oferta;
   const pct = descuentoPct(p);
-  if (pct !== null) return `-${pct}%`;
-  return p.oferta ? p.oferta : null;
+  return pct !== null ? `-${pct}%` : null;
+}
+
+/**
+ * ¿La oferta es un 2x1? En ese caso el precio mostrado es por unidad y el UI
+ * agrega "c/u" al lado del precio.
+ */
+export function esDosPorUno(p: ConOferta): boolean {
+  return (
+    typeof p.oferta === "string" &&
+    p.oferta.trim().toLowerCase().replace(/\s+/g, "") === "2x1"
+  );
 }

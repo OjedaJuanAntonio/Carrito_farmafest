@@ -1,5 +1,6 @@
 import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/data";
+import { esDosPorUno } from "@/lib/offers";
 import { ProductImage } from "./ProductImage";
 import { OfferBadge } from "./OfferBadge";
 
@@ -61,6 +62,9 @@ export function ProductCard({
             )}
             <p className="text-lg font-bold text-brand-dark leading-none mt-0.5">
               {formatPrice(product.precio)}
+              {esDosPorUno(product) && (
+                <span className="text-[11px] font-medium text-ink-muted ml-1">c/u</span>
+              )}
             </p>
             {stock && (
               <p className={`text-[11px] mt-1 ${stock.className}`}>

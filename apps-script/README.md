@@ -1,143 +1,95 @@
-# Publicar precios desde Google Sheets
+# Publicar precios en la web
 
-Este flujo permite que **cualquier persona edite precios y ofertas en una
-planilla de Google y publique con un botón**, sin tocar el repositorio ni
-esperar a un desarrollador.
+La web del carrito se alimenta de **un solo archivo: el export/import de
+POSBerry** (`POSBERRY_IMPORT.xlsx`), el mismo que usa la facturación. No hay una
+planilla de precios aparte para la web.
 
-> **Un solo archivo para todo.** La planilla usa el **mismo formato que
-> POSBerry**: editás precios y descuentos en Google Sheets (el "master"),
-> tocás **Publicar** para la web, y cuando necesitás facturar **descargás** la
-> pestaña `Productos` como `.xlsx` (Archivo → Descargar → Microsoft Excel) y la
-> subís a POSBerry tal cual. La ingesta **detecta el formato POSBerry solo**.
+> **POSBerry manda.** El archivo trae el **precio regular** (`*Precio de Venta`)
+> y el **nombre de la familia** (`Familia`, ej. `40%`, `2X1`, `2DO70%`). La
+> ingesta calcula el **precio mostrado** según la familia, usando la misma
+> cuenta que las etiquetas, así queda **etiqueta = web**.
 
 ```
-Editás la planilla  →  botón "FarmaFest ▸ Publicar precios"
+Actualizás el Excel de POSBerry  →  lo subís a data-src/ (web de GitHub o git)
         │
         ▼
-Apps Script dispara un GitHub Action  →  ingesta (valida) + commit
+GitHub Action corre la ingesta (valida + calcula ofertas) + commitea
         │
         ▼
 Cloudflare Pages redeploya  →  precios nuevos online (~2–3 min)
 ```
 
-## 1. Armar la planilla
+## Archivos que usa la web (en `data-src/`)
 
-Creá un Google Sheet con **dos pestañas**: `Productos` (formato POSBerry) y
-`Stands` (mapeo de proveedores).
+| Archivo | Qué es | Cada cuánto cambia |
+|---------|--------|--------------------|
+| `productos.xlsx` | El export de POSBerry (`POSBERRY_IMPORT.xlsx`), renombrado. **Acá viven los precios.** | Cada vez que cambian precios/ofertas |
+| `familias.csv` | Diccionario de mecánicas: `Familia, Tipo, Valor, Etiqueta` | Solo si aparece una familia nueva |
+| `stands.csv` / `stands.xlsx` | Mapeo `Stand, Proveedor, CUIT` | Solo si aparece un proveedor nuevo |
 
-### Pestaña `Productos` — formato POSBerry
+### `productos.xlsx` — columnas que lee la web
+Es el archivo de POSBerry tal cual (sus columnas fijas). La web solo usa:
 
-Pegá acá el archivo de POSBerry **tal cual** (sus 28 columnas, en su orden).
-La app **solo lee** estas columnas; el resto las usa POSBerry y se ignoran:
+| Columna POSBerry   | Para qué |
+|--------------------|----------|
+| `Codigo de Barras` | **EAN**: identifica el producto y linkea la foto |
+| `*Descripcion`     | Nombre (se muestra tal cual) |
+| `*Precio de Venta` | **Precio regular** (antes de la oferta) |
+| `Familia`          | **Nombre** de la familia (la mecánica sale de `familias.csv`) |
+| `CUIT Proveedor`   | Asigna el **stand** (ver `stands.csv`) |
 
-| Columna POSBerry     | Para qué la usa la app |
-|----------------------|------------------------|
-| `Codigo de Barras`   | **EAN**: identifica el producto y linkea la foto |
-| `*Descripcion`       | Nombre del producto (se muestra tal cual) |
-| `*Precio de Venta`   | **Precio** (de lista) |
-| `Familia`            | **Descuento** como fracción: `0.3` = 30% off (vacío = sin oferta) |
-| `CUIT Proveedor`     | Asigna el **stand** (ver pestaña Stands) |
+Se publican **todos** los productos. Las demás columnas las usa POSBerry y se
+ignoran. El código que importa es `Codigo de Barras` (EAN), no `*Codigo`.
 
-- Con descuento en `Familia`: la app muestra el precio de lista **tachado**, el
-  precio con descuento (`Precio de Venta × (1 − 0.3)`) y el badge **-X%**.
-- Se publican **todos** los productos del archivo. No se usa stock.
-- El código que importa es **`Codigo de Barras`** (EAN), no `*Codigo` (interno).
+### `familias.csv` — mecánica de cada oferta
 
-### Pestaña `Stands` — mapeo por CUIT
+| Columna    | Qué poner |
+|------------|-----------|
+| `Familia`  | El nombre **exacto** como figura en el Excel (`40%`, `2X1`, `2DO70%`…) |
+| `Tipo`     | `PORCENTAJE`, `2X1`, `SEGUNDO` o `NINGUNA` (si lo dejás vacío, se infiere del nombre) |
+| `Valor`    | Fracción del descuento: `0.40` (o `40` / `40%`). Obligatorio en `PORCENTAJE` |
+| `Etiqueta` | Texto del badge (opcional; si falta se deriva del tipo) |
 
-| Stand | Proveedor            | CUIT          |
-|-------|----------------------|---------------|
-| 8     | Cuenca               | 20111111125   |
-| 6     | Beauty Solutions…    | 30xxxxxxxx x  |
+Cómo se muestra cada tipo:
+- **PORCENTAJE** (`40%`): precio regular **tachado** + precio con descuento + badge `-40%`.
+- **2X1**: regular **tachado** + precio a la mitad con **"c/u"** + badge `2x1`.
+- **SEGUNDO** (`2DO70%`): **solo** el precio regular + badge `2do al 70%` (no calcula precio por unidad).
+- Familia que no esté en la tabla → se publica **sin oferta** (queda avisado en el reporte).
 
-- Cada producto se asigna a su stand haciendo **match del `CUIT Proveedor`**
-  (del archivo POSBerry) contra la columna `CUIT` de esta pestaña.
-- Si un mismo CUIT quedara asignado a varios stands, gana el de **número menor**.
-- Plantilla con los 56 stands: `data-src/stands.csv` (completá la columna CUIT).
+### `stands.csv` — mapeo por CUIT
+`Stand, Proveedor, CUIT`. Cada producto va al stand cuyo `CUIT` coincide con su
+`CUIT Proveedor`. Si un mismo CUIT cayera en varios stands, gana el **menor**.
+Plantilla con los 56 stands en `data-src/stands.csv` (completá la columna CUIT).
 
-> **Formato propio (alternativa).** La ingesta también acepta el formato simple
-> (`Código de barras, Descripción, Precio, Stand` + opcionales `Precio anterior,
-> Oferta, Foto, Stock`); se usa automáticamente si la planilla **no** tiene
-> columna CUIT. Sirve para pruebas o carga manual.
+## Publicar
 
-## 2. Publicar cada pestaña como CSV
+### Opción A — subir el Excel por GitHub (recomendada, sin instalar nada)
+1. En el repo, entrá a `data-src/` → `productos.xlsx` → **Upload / Replace file**
+   y subí tu export de POSBerry (nombralo `productos.xlsx`).
+2. Confirmás el commit. El Action **Publicar precios** corre solo (pestaña
+   **Actions**): valida, calcula ofertas y publica. En ~2–3 min está online.
+3. El reporte (filas descartadas, familias desconocidas) queda en el resumen del
+   run.
 
-En Google Sheets: **Archivo → Compartir → Publicar en la web**.
-
-1. Elegí la pestaña **Productos**, formato **CSV**, y copiá la URL.
-2. Repetí con la pestaña **Stands**.
-
-Quedan dos URLs tipo
-`https://docs.google.com/spreadsheets/d/e/XXXX/pub?gid=0&single=true&output=csv`.
-
-> Los precios van a un sitio público igual, así que publicar el CSV (solo
-> lectura) es aceptable. Si preferís mantener la planilla privada, se puede
-> usar la API de Google con una cuenta de servicio; avisá y lo cambiamos.
-
-## 3. Cargar las URLs en GitHub
-
-En el repo: **Settings → Secrets and variables → Actions → Variables**, agregá:
-
-| Variable              | Valor                                  |
-|-----------------------|----------------------------------------|
-| `SHEET_PRODUCTOS_URL` | URL CSV de la pestaña Productos         |
-| `SHEET_STANDS_URL`    | URL CSV de la pestaña Stands            |
-| `IMAGE_BASE_URL`      | (opcional) base de las fotos, ver abajo |
-
-## 4. Conectar el botón (Apps Script)
-
-1. En la planilla: **Extensiones → Apps Script**.
-2. Pegá el contenido de [`Codigo.gs`](./Codigo.gs) y guardá.
-3. **Configuración del proyecto → Propiedades del script**, agregá:
-   - `GITHUB_REPO` = `OjedaJuanAntonio/Carrito_farmafest`
-   - `GITHUB_TOKEN` = un token de GitHub (ver abajo).
-4. Recargá la planilla: aparece el menú **FarmaFest**.
-
-**Token de GitHub**: creá un *fine-grained token* (Settings → Developer
-settings → Fine-grained tokens) con acceso **solo a este repo** y permiso
-**Contents: read and write** (y **Actions: read/write** si querés seguir el
-run). Pegalo como `GITHUB_TOKEN`. No se guarda en el código, solo en las
-propiedades del script.
-
-## 5. Usar
-
-1. Editá precios/ofertas en la planilla.
-2. **FarmaFest → Chequear planilla** (opcional): avisa errores obvios.
-3. **FarmaFest → Publicar precios**: confirma y dispara la publicación.
-4. En 2–3 min los precios están online. El reporte completo de la ingesta
-   (filas descartadas y por qué) queda en la pestaña **Actions** del repo, en
-   el resumen del run "Publicar precios".
-5. **Para facturar en POSBerry**: en la pestaña `Productos`, **Archivo →
-   Descargar → Microsoft Excel (.xlsx)** y subí ese archivo a POSBerry. Es el
-   mismo contenido que ves en la web; editás en un solo lugar.
+### Opción B — desde la notebook (respaldo)
+Con el repo clonado y Node: dejá el archivo en `data-src/productos.xlsx` y corré
+`npm run publish:data` (corre la ingesta y publica). Útil para la carga inicial.
 
 ## Imágenes
 
-**Recomendado: nombrá cada foto con el código de barras** y no toques la
-planilla. Poné los archivos en `public/img/productos/`:
+**Recomendado: nombrá cada foto con el código de barras** y ponelas en
+`public/img/productos/` (`7791000000017.webp`). La app vincula sola cada
+producto con `<su-código>.<ext>`; los que no tienen archivo muestran un
+placeholder. Extensiones: webp/avif/jpg/jpeg/png/gif/svg (mejor **.webp**). Para
+alojarlas aparte, un bucket **Cloudflare R2** público + `IMAGE_BASE_URL`. **No
+uses Google Drive** (bloquea el hotlink).
 
-```
-7791000000017.jpg
-7790123456789.webp
-```
+## (Opcional) Planilla de Google como capa de edición
 
-La app vincula sola cada producto con `<su-código>.<ext>`; los que no tienen
-archivo muestran un placeholder digno (ningún flujo depende de la imagen). Las
-fotos quedan **offline** una vez vistas. Extensiones: webp/avif/jpg/jpeg/png/
-gif/svg (mejor **.webp** o `.jpg`). Detalle en
-[`public/img/productos/README.md`](../public/img/productos/README.md).
-
-La columna **Foto** de la planilla es opcional y **solo para excepciones**: si
-la completás, tiene prioridad. Acepta una URL completa (`https://…/x.jpg`) o un
-nombre de archivo + `IMAGE_BASE_URL`.
-
-> **Dónde alojar**: por defecto en el repo (offline, sin servicios). Para
-> gestionarlas aparte sin tocar el repo, un bucket **Cloudflare R2** público y
-> `IMAGE_BASE_URL` con la columna Foto. **No uses Google Drive**: bloquea el
-> hotlink.
-
-## Sin planilla (respaldo)
-
-El flujo con Excel local sigue funcionando: `npm run publish:data` corre la
-ingesta sobre `data-src/*.xlsx` y publica. Útil para la carga inicial o si
-Google no está disponible.
+Si en algún momento se quiere editar en vivo desde una planilla, se puede
+publicar una pestaña `Productos` (mismo formato POSBerry) como CSV y cargar su
+URL en la variable `SHEET_PRODUCTOS_URL` del repo (ídem `SHEET_STANDS_URL`,
+`SHEET_FAMILIAS_URL`); el botón de Apps Script (`Codigo.gs`) dispara el mismo
+Action. **Esto es solo una capa de publicación llenada desde la verdad de
+POSBerry, no una segunda fuente de precios.** Por defecto no se usa: el master
+es el Excel de POSBerry.
