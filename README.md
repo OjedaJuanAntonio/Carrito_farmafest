@@ -8,8 +8,9 @@ desde el teléfono en el predio, **con señal mala o sin señal**.
   planos desde Cloudflare Pages / cualquier CDN. Sin backend.
 - **PWA offline**: tras la primera visita, todo el catálogo funciona sin
   conexión.
-- **Precios y ofertas se editan en un Google Sheet y se publican con un
-  botón** (ver runbook), sin tocar el repo.
+- **Un solo archivo (el export de POSBerry) alimenta facturación y web.** Se
+  publica subiéndolo a `data-src/` (o con el botón de la planilla, opcional);
+  ver runbook. La ingesta autodetecta el formato POSBerry o el propio.
 - **Ofertas**: precio anterior tachado + badge `-X%` / etiqueta (`2x1`…).
 - **Carrito local por stand** con checkout por caja de stand (QR). *(El
   carrito quedó en segundo plano; el foco es el catálogo de precios y fotos.)*
@@ -39,9 +40,9 @@ desde el teléfono en el predio, **con señal mala o sin señal**.
 
 ```bash
 npm install
-npm run sample-data   # genera Excel de ejemplo (60 stands, ~9.200 productos)
-npm run ingest        # Excel → JSON en public/data/
-npm run dev           # http://localhost:3000
+npm run sample-data     # genera datos de ejemplo en data-src/sample/
+npm run ingest:sample   # sample → JSON en public/data/
+npm run dev             # http://localhost:3000
 ```
 
 Con Docker:
@@ -64,47 +65,49 @@ npm run preview # sirve out/ en :4173 para probar offline/Lighthouse
 
 ## Runbook del evento
 
-### Publicar precios y ofertas EN CALIENTE (recomendado: Google Sheets)
+### Fuente de datos: una sola por dataset (en `data-src/`)
 
-1. Editá la planilla de Google (precio, precio anterior, oferta, stock…).
-2. En la planilla: menú **FarmaFest → Publicar precios**.
-3. En 2–3 minutos los precios están online. Sin señal, los teléfonos muestran
-   el último precio conocido y avisan "sin conexión".
+- **`productos.xlsx`** — el export/import de **POSBerry** (los precios). Es el
+  único archivo que se actualiza seguido.
+- **`stands.csv`** — `Stand, Proveedor, CUIT` (asigna cada producto a su stand
+  por **CUIT**).
+- **`familias.csv`** — `Familia, Tipo, Valor, Etiqueta` (mecánica de cada oferta).
 
-Nadie toca el repo. El botón dispara un GitHub Action que corre la ingesta
-(validación incluida) y publica; Cloudflare Pages redeploya solo. El reporte
-de filas descartadas queda en la pestaña **Actions** del repo.
+La ingesta **autodetecta** el formato: si `productos` trae columna `CUIT`, usa el
+modo **POSBerry** (precio regular + descuento por familia + stand por CUIT); si
+no, acepta el **formato propio** (`Código de barras, Descripción, Precio, Stand`
++ opcionales `Precio anterior, Oferta, Foto, Stock`) para pruebas/carga manual.
+Detalle del formato POSBerry: **[apps-script/README.md](apps-script/README.md)**.
 
-**Puesta a punto (una vez)**: seguí **[apps-script/README.md](apps-script/README.md)**
-— armar la planilla, publicarla como CSV, cargar las URLs como *Variables* del
-repo y pegar el script del botón.
+### Publicar precios y ofertas EN CALIENTE (recomendado)
 
-**Columnas de la planilla `Productos`**: **Código de barras, Descripción,
-Precio, Stand** (requeridas) y opcionales **Precio anterior, Oferta, Foto,
-Stock**. Los encabezados toleran mayúsculas, acentos y variantes ("EAN",
-"Nº de stand", "Promo"…).
+1. Actualizá **`data-src/productos.xlsx`** con el export de POSBerry (subílo por
+   la web de GitHub a `data-src/`, o por git).
+2. Un **GitHub Action** (`publicar-precios.yml`, trigger `push` a `data-src/**`)
+   corre la ingesta, valida y commitea `public/data`; Cloudflare Pages redeploya
+   solo. En 2–3 min está online; el reporte queda en la pestaña **Actions**.
+   Alternativa local: `npm run publish:data`.
+3. Sin señal, los teléfonos muestran el último precio conocido y avisan "sin
+   conexión".
 
-### Publicar por Excel (respaldo, sin planilla)
-
-1. Corregí `data-src/productos.xlsx` (o el archivo real).
-2. `npm run publish:data` — corre la ingesta y publica `public/data`.
-
-También podés apuntar la ingesta a una planilla publicada sin el botón:
-
-```bash
-SHEET_PRODUCTOS_URL="https://…output=csv" SHEET_STANDS_URL="https://…output=csv" npm run ingest
-```
+> **Opcional — planilla de Google** como capa de edición en vivo: publicar las
+> pestañas como CSV y cargar `SHEET_PRODUCTOS_URL` / `SHEET_STANDS_URL` /
+> `SHEET_FAMILIAS_URL` como *Variables* del repo; el botón de Apps Script dispara
+> el mismo Action. Es solo publicación llenada desde la verdad de POSBerry, **no
+> una segunda fuente de precios**. Puesta a punto: apps-script/README.md.
 
 Reglas de la ingesta (iguales para Excel, CSV o planilla):
 - Códigos: 6–14 dígitos; duplicados se descartan (gana la primera fila).
 - Precio: número o texto AR ("$ 1.234,50"); inválido → fila afuera.
-- **Precio anterior**: solo se usa si es mayor al precio (genera el `-X%`).
-- **Oferta**: etiqueta libre; con baja de precio el badge muestra el `-X%`.
-- Stand inexistente → fila afuera.
+- **POSBerry**: `*Precio de Venta` es el **regular**; la oferta sale de la
+  familia (`familias.csv`); el stand se asigna por **CUIT**. Familia desconocida
+  → se publica sin oferta (queda avisado).
+- **Formato propio**: `Precio anterior` solo si es mayor al precio (genera el
+  `-X%`); `Oferta` es etiqueta libre.
+- Stand inexistente (o CUIT no mapeado) → fila afuera.
 - Foto y Stock **opcionales**: sin foto, placeholder; sin stock, no se muestra.
-  Nunca bloquean un flujo. **La foto se vincula por código de barras**: se
-  nombra el archivo `<código>.jpg` y se deja en `public/img/productos/`, sin
-  llenar la columna Foto (ver apps-script/README.md → Imágenes).
+  **La foto se vincula por código de barras**: archivo `<código>.jpg` en
+  `public/img/productos/` (ver apps-script/README.md → Imágenes).
 
 > **Alta/baja de stands** cambia las rutas estáticas: eso sí requiere `git
 > push` con rebuild (CF Pages) — no es un cambio "en caliente". Los precios y
@@ -155,11 +158,14 @@ Pendiente para marketing: PNG 192/512 para el ícono PWA y apple-touch-icon
 ## Arquitectura (resumen)
 
 ```
-Google Sheet ──(botón)──▶ GitHub Action ──(npm run ingest)──▶ public/data/
-  o Excel/CSV local        (valida + commit)                   ├── manifest.json
-                                    │                           ├── stands.json
-                                    ▼                           ├── stand/<id>.json
-                          Cloudflare Pages redeploya            └── index.json
+data-src/ (productos.xlsx POSBerry + stands.csv + familias.csv)
+   │   push a data-src/**   (o planilla Google → botón, opcional)
+   ▼
+GitHub Action ──(npm run ingest)──▶ public/data/
+  (valida + commit)                 ├── manifest.json
+   │                                ├── stands.json
+   ▼                                ├── stand/<id>.json
+Cloudflare Pages redeploya          └── index.json
 ```
 
 - Las páginas son estáticas; **los datos se leen en runtime por fetch** con

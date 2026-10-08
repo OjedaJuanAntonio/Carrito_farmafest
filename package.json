@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "ingest": "tsx scripts/ingest.ts",
+    "ingest:sample": "tsx scripts/ingest.ts --productos data-src/sample/productos.xlsx --stands data-src/sample/stands.csv",
     "sample-data": "tsx scripts/generate-sample-data.ts",
     "publish:data": "tsx scripts/publish-data.ts"
   },

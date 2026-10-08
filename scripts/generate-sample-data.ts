@@ -1,8 +1,10 @@
 /**
  * Genera datos de ejemplo realistas para desarrollo y testing:
- *   - data-src/stands.xlsx     (60 stands ↔ proveedores)
- *   - data-src/productos.xlsx  (~9.000 productos)
+ *   - data-src/sample/stands.csv     (60 stands ↔ proveedores)
+ *   - data-src/sample/productos.xlsx (~9.000 productos, formato propio)
  *
+ * Escribe en `data-src/sample/` (NO en `data-src/`) para no pisar los datos
+ * reales del evento. Para ingerirlos: `npm run ingest:sample`.
  * Determinístico (PRNG con semilla fija): correrlo dos veces da lo mismo.
  * Uso: npm run sample-data
  */
@@ -312,19 +314,19 @@ function generarProductos(): FilaProducto[] {
 }
 
 async function main() {
-  const outDir = path.join(process.cwd(), "data-src");
+  const outDir = path.join(process.cwd(), "data-src", "sample");
   mkdirSync(outDir, { recursive: true });
 
-  // ---- stands.xlsx ----
-  const wbStands = new ExcelJS.Workbook();
-  const wsStands = wbStands.addWorksheet("Stands");
-  wsStands.addRow(["Stand", "Proveedor"]);
-  PROVEEDORES.forEach((proveedor, i) => {
-    wsStands.addRow([i + 1, proveedor]);
-  });
-  await wbStands.xlsx.writeFile(path.join(outDir, "stands.xlsx"));
+  // ---- stands.csv (fuente única de stands; 3 columnas, CUIT vacío) ----
+  writeFileSync(
+    path.join(outDir, "stands.csv"),
+    toCsv([
+      ["Stand", "Proveedor", "CUIT"],
+      ...PROVEEDORES.map((p, i) => [i + 1, p, ""]),
+    ])
+  );
 
-  // ---- productos.xlsx ----
+  // ---- productos.xlsx (formato propio: columna Stand) ----
   const productos = generarProductos();
   const wbProd = new ExcelJS.Workbook();
   const wsProd = wbProd.addWorksheet("Productos");
@@ -352,22 +354,12 @@ async function main() {
   for (const f of filasProd) wsProd.addRow(f);
   await wbProd.xlsx.writeFile(path.join(outDir, "productos.xlsx"));
 
-  // ---- Espejo en CSV (mismo formato que exporta Google Sheets) ----
-  // Sirve para probar el flujo de planilla sin una hoja real y como plantilla.
-  writeFileSync(
-    path.join(outDir, "stands.csv"),
-    toCsv([["Stand", "Proveedor"], ...PROVEEDORES.map((p, i) => [i + 1, p])])
-  );
-  writeFileSync(
-    path.join(outDir, "productos.csv"),
-    toCsv([headerProd, ...filasProd])
-  );
-
   const enOferta = productos.filter((p) => p.precioAnterior || p.oferta).length;
-  console.log(`✔ data-src/stands.xlsx + .csv    → ${PROVEEDORES.length} stands`);
+  console.log(`✔ data-src/sample/stands.csv     → ${PROVEEDORES.length} stands`);
   console.log(
-    `✔ data-src/productos.xlsx + .csv → ${productos.length} productos (${enOferta} en oferta)`
+    `✔ data-src/sample/productos.xlsx → ${productos.length} productos (${enOferta} en oferta)`
   );
+  console.log("ℹ Para ingerirlos: npm run ingest:sample");
 }
 
 main().catch((err) => {

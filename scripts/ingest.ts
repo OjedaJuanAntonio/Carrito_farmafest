@@ -160,7 +160,7 @@ async function main() {
   );
   const standsPath = arg(
     "stands",
-    process.env.SHEET_STANDS_URL || path.join("data-src", "stands.xlsx")
+    process.env.SHEET_STANDS_URL || path.join("data-src", "stands.csv")
   );
   const familiasPath = arg(
     "familias",

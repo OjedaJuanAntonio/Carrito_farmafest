@@ -21,6 +21,24 @@ renumerar, que sí rompe todos los impresos. Avisos replicados en
 `src/config/venue.ts`, `src/components/QrSheet.tsx` (código + cartel visible en
 `/qr`), `README.md` y la bóveda.
 
+## Fuente de datos única por dataset (2026-10-08)
+
+Contexto: convivían dos "formas de cargar": archivos gemelos `.xlsx` **y** `.csv`
+en `data-src/` (editar el gemelo que la ingesta no lee no hacía nada), y docs
+partidas entre "Google Sheets master" y "POSBerry un-archivo".
+
+Decisión: **una sola fuente por dataset** — `data-src/productos.xlsx` (export de
+POSBerry), `data-src/stands.csv`, `data-src/familias.csv`. La ingesta lee esos
+por defecto (`stands` pasó de `.xlsx` a `.csv`). Se eliminaron los gemelos
+(`productos.csv`, `stands.xlsx`). Formato oficial = **POSBerry un-archivo**; el
+formato propio queda solo como compatibilidad/pruebas (autodetección por columna
+CUIT). `generate-sample-data` ahora escribe en `data-src/sample/` (gitignored) y
+se ingiere con `npm run ingest:sample`, para **no pisar los datos reales**.
+README actualizado; Google Sheets queda como capa de publicación opcional.
+
+Por qué: evita el bug silencioso de editar el archivo equivocado y la
+contradicción de docs; deja un solo camino claro Excel POSBerry → web.
+
 ## Ofertas y datos desde Google Sheets (post-branding, 2026-09)
 
 Contexto: la gerencia quiere ver **precios y fotos** (el carrito pasa a segundo

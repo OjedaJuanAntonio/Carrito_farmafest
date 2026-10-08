@@ -17,3 +17,6 @@ next-env.d.ts
 
 # reportes de ingesta (se regeneran)
 /reports/
+
+# datos de ejemplo (se regeneran con `npm run sample-data`)
+/data-src/sample/
