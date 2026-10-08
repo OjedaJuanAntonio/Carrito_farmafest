@@ -1,4 +1,13 @@
 /**
+ * ⚠ IMPORTANTE — QR IMPRESOS: NO RENUMERAR NI ELIMINAR STANDS.
+ * Los códigos QR físicos de cada stand (ver src/components/QrSheet.tsx y la
+ * carpeta entregada al Drive) apuntan al NÚMERO de stand: /stand/<id>/. Una vez
+ * impresos no hay tiempo para rehacerlos. Podés cambiar el `nombre`/proveedor de
+ * un `id` y mover su posición (x/y/w/h), pero NO cambiar el `id` de un stand ni
+ * quitarlo, porque rompería el QR impreso correspondiente. Tampoco cambiar la
+ * URL base del sitio (https://farmafest.pages.dev). Detalle:
+ * [[Carrito Farmafest - QR impresos (no cambiar)]] en la bóveda.
+ *
  * Distribución del predio (mapa del evento). Coordenadas en el sistema del
  * `viewBox` del SVG (ver VenueMap), derivadas del plano oficial del Centro de
  * Convenciones Corrientes guardado en `data-src/plano-predio-v3.jpg`.

@@ -13,6 +13,12 @@ export const metadata: Metadata = {
  * Página operativa (no enlazada desde el público): genera los QR de todos los
  * stands + un QR de pasillo, para imprimir y pegar en el evento. Los stands se
  * enumeran en build; los QR se arman en el cliente con la URL real del sitio.
+ *
+ * ⚠ QR IMPRESOS — NO CAMBIAR: los QR de los stands ya se mandaron a imprimir en
+ * físico (apuntan a /stand/<id>/). No renumerar/eliminar stands ni cambiar la
+ * URL base (https://farmafest.pages.dev) o los QR impresos dejan de servir y no
+ * hay tiempo para rehacerlos. Ver src/config/venue.ts y la nota de la bóveda
+ * "Carrito Farmafest - QR impresos (no cambiar)".
  */
 export default async function QrPage() {
   const stands = await loadStandsAtBuild();

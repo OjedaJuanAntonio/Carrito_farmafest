@@ -9,6 +9,12 @@ type StandLite = { id: number; proveedor: string };
  * Hoja de QRs para imprimir: un QR por stand (→ /stand/<id>/) más un QR de
  * pasillo (→ /). Los QR se arman en el cliente con la URL real del sitio
  * (window.location.origin), así funcionan en cualquier dominio donde se sirva.
+ *
+ * ⚠ QR IMPRESOS — NO CAMBIAR: estos QR ya se imprimieron en físico. Apuntan al
+ * NÚMERO de stand, no al proveedor. No renumerar/eliminar stands ni cambiar la
+ * URL base del sitio (https://farmafest.pages.dev), o los impresos dejan de
+ * servir y no hay tiempo para rehacerlos. Cambiá el contenido de /stand/<id>/,
+ * nunca el número ni el dominio.
  */
 export function QrSheet({ stands }: { stands: StandLite[] }) {
   const [origin, setOrigin] = useState("");
@@ -27,6 +33,18 @@ export function QrSheet({ stands }: { stands: StandLite[] }) {
           Un QR por stand (lleva a su mini-tienda) y uno de pasillo (lleva al
           buscador general). Imprimí y pegá cada uno en su lugar del predio.
         </p>
+        <div
+          role="note"
+          className="mx-1 mt-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-[13px] text-warning"
+        >
+          <strong>⚠ No cambiar estos QR.</strong> Ya se mandan a imprimir en
+          físico. Cada QR apunta al <strong>número</strong> de stand
+          (<code>/stand/&lt;n&gt;/</code>), no al proveedor: si un número cambia
+          de proveedor, el QR sigue sirviendo y solo hay que actualizar los
+          datos de la web de ese stand. <strong>No renumeres ni elimines
+          stands</strong> y <strong>no cambies la URL base</strong> del sitio, o
+          los impresos dejan de funcionar y no hay tiempo para rehacerlos.
+        </div>
         <div className="flex flex-wrap items-center gap-2 mt-3 px-1">
           <button
             onClick={() => window.print()}

@@ -14,6 +14,19 @@ desde el teléfono en el predio, **con señal mala o sin señal**.
 - **Carrito local por stand** con checkout por caja de stand (QR). *(El
   carrito quedó en segundo plano; el foco es el catálogo de precios y fotos.)*
 
+> ## ⚠ QR impresos — NO CAMBIAR
+> Los códigos QR de los stands **se mandaron a imprimir en físico** y no hay
+> tiempo para rehacerlos. Cada QR apunta al **número** de stand
+> (`/stand/<n>/`), no al proveedor. En consecuencia:
+> - **No cambiar la URL base** del sitio: debe seguir siendo
+>   `https://farmafest.pages.dev` (no pasar a dominio propio ni renombrar/borrar
+>   el proyecto de Cloudflare Pages mientras los QR estén en uso).
+> - **No renumerar ni eliminar stands.** Si un número pasa a otro proveedor, el
+>   QR sigue sirviendo: solo hay que actualizar los datos de ese stand. Lo único
+>   que no se puede tocar es el número y el dominio.
+> - Fuente/entrega de los QR: `src/components/QrSheet.tsx`, página `/qr`, y la
+>   carpeta entregada al Drive.
+
 ## Cómo se usa (flujo del evento)
 
 1. El cliente escanea el **QR del stand** → `/stand/12/` (mini-tienda del

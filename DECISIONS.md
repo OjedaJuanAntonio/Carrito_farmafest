@@ -3,6 +3,24 @@
 Registro de decisiones tomadas de forma autónoma durante el desarrollo.
 Formato: contexto → decisión → por qué.
 
+## ⚠ QR impresos — invariantes que NO se pueden cambiar (2026-10-08)
+
+Contexto: se mandaron a imprimir en físico los **54 QR de stands** (SVG + PNG
+2048px, pelados; entregados en un ZIP para el Drive). Una vez impresos, cambiar
+el destino implica reimprimir, y no hay tiempo.
+
+Decisión (congelado): cada QR codifica `https://farmafest.pages.dev/stand/<n>/`.
+Quedan **fijos**: (1) la **URL base** `https://farmafest.pages.dev` y (2) el
+**esquema de numeración** de stands (1–51, 56, 57, 58). Se puede cambiar
+libremente **qué proveedor/productos** hay en cada número (actualizando los
+datos), pero **nunca el número ni el dominio**.
+
+Por qué: el QR apunta a la posición/número, no al proveedor; así una reasignación
+de proveedor no obliga a reimprimir. El riesgo real es mover el dominio o
+renumerar, que sí rompe todos los impresos. Avisos replicados en
+`src/config/venue.ts`, `src/components/QrSheet.tsx` (código + cartel visible en
+`/qr`), `README.md` y la bóveda.
+
 ## Ofertas y datos desde Google Sheets (post-branding, 2026-09)
 
 Contexto: la gerencia quiere ver **precios y fotos** (el carrito pasa a segundo
