@@ -360,8 +360,18 @@ export function procesarStands(filas: FilaCrudaStand[]): {
     const idRaw = celdaTexto(f.stand);
     if (!idRaw && !proveedor) continue; // fila vacía: se ignora en silencio
 
+    // El stand 0 es válido (acordado con un proveedor). OJO: `Number("")` es 0,
+    // así que una celda VACÍA no debe caer en stand 0 → se chequea el texto.
+    if (idRaw === "") {
+      errores.push({
+        fila: f.fila,
+        motivo: `falta el número de stand`,
+        contexto: proveedor,
+      });
+      continue;
+    }
     const id = Number(idRaw);
-    if (!Number.isInteger(id) || id <= 0) {
+    if (!Number.isInteger(id) || id < 0) {
       errores.push({
         fila: f.fila,
         motivo: `número de stand inválido «${idRaw}»`,
@@ -473,6 +483,11 @@ export function procesarProductos(
       }
       standId = sid;
     } else {
+      // Celda Stand vacía: NO debe caer en el stand 0 (`Number("")` es 0).
+      if (standRaw === "") {
+        errores.push({ fila: f.fila, motivo: `producto ${codigo} sin stand`, contexto: descripcion });
+        continue;
+      }
       standId = Number(standRaw);
       if (!Number.isInteger(standId) || !standIds.has(standId)) {
         errores.push({

@@ -86,6 +86,33 @@ describe("procesarStands", () => {
     expect(stands).toHaveLength(0);
     expect(errores).toHaveLength(0);
   });
+
+  it("acepta el stand 0 (acordado con un proveedor)", () => {
+    const { stands, errores } = procesarStands([
+      { fila: 2, stand: 0, proveedor: "Institucional" },
+      { fila: 3, stand: "0", proveedor: "Duplicado del 0" },
+    ]);
+    expect(stands.map((s) => s.id)).toEqual([0]);
+    expect(errores).toHaveLength(1);
+    expect(errores[0].motivo).toContain("duplicado");
+  });
+
+  it("una celda de stand vacía con proveedor NO es el stand 0", () => {
+    const { stands, errores } = procesarStands([
+      { fila: 2, stand: "", proveedor: "Tiene proveedor, sin número" },
+    ]);
+    expect(stands).toHaveLength(0);
+    expect(errores).toHaveLength(1);
+    expect(errores[0].motivo).toContain("falta el número de stand");
+  });
+
+  it("descarta números de stand negativos", () => {
+    const { stands, errores } = procesarStands([
+      { fila: 2, stand: -1, proveedor: "Negativo" },
+    ]);
+    expect(stands).toHaveLength(0);
+    expect(errores[0].motivo).toContain("inválido");
+  });
 });
 
 describe("procesarProductos", () => {
@@ -204,6 +231,27 @@ describe("procesarProductos", () => {
       { fotoPorCodigo: resolver }
     );
     expect(r.productos[0].foto).toBe("/img/explicita.jpg");
+  });
+});
+
+describe("procesarProductos con stand 0", () => {
+  const STANDS0: Stand[] = [
+    { id: 0, proveedor: "Institucional" },
+    { id: 1, proveedor: "Laboratorios Andino" },
+  ];
+
+  it("asigna un producto al stand 0", () => {
+    const r = procesarProductos([fila({ stand: 0 })], STANDS0);
+    expect(r.errores).toHaveLength(0);
+    expect(r.productos).toHaveLength(1);
+    expect(r.productos[0].stand).toBe(0);
+  });
+
+  it("una celda Stand vacía NO cae en el stand 0", () => {
+    const r = procesarProductos([fila({ stand: "" })], STANDS0);
+    expect(r.productos).toHaveLength(0);
+    expect(r.errores).toHaveLength(1);
+    expect(r.errores[0].motivo).toContain("sin stand");
   });
 });
 
