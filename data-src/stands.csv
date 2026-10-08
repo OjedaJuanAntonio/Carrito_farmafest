@@ -1,56 +1,56 @@
-Stand,Proveedor,CUIT
-0,Capilatis,
-1,Vamma - Bioderma,
-2,Dorothy Gray,
-3,Dorothy Gray,
-4,Algabo,
-5,Chicco - Avent,
-6,Disney,
-7,Bagó,
-8,Cuenca,
-9,Oreiro,
-10,Loval,
-11,Combe,
-12,Caviahue,
-13,Johnson Family,
-14,Comimpar,
-15,Active Cosmetic,
-16,Gamma,
-17,Eurolab - Viasek,
-18,Bernabó,
-19,Laboratorio ENA,
-20,Elea - Adermicina,
-21,IDI,
-22,Genoma,
-23,Contigo,
-24,SISCOM,
-25,Estereocolor,
-26,Ferrini - Max,
-27,Buhl,
-28,ACF,
-29,Lancôme,
-30,Biosintex,
-31,Loreal,
-32,BIC,
-33,Cdimex,
-34,Nestlé,
-35,Procter,
-36,Ala,
-37,Sedal,
-38,Biferdil,
-39,Kimberly,
-40,Cannon,
-41,Coty,
-42,Colgate,
-43,By Derm - Star Nutrition,
-44,Loreal,
-45,Essity,
-46,Rexona,
-47,Nivea - Eucerin,
-48,Neutrogena,
-49,Papelera,
-50,Andrómaco,
-51,Farmar,
-56,Facor,
-57,Isdin,
-58,Skin Coreano,
+Stand,Proveedor,CUIT,AliasPOSBerry
+0,Capilatis,,CAPILATIS
+1,Vamma - Bioderma,,VAMMA|BIODERMA
+2,Dorothy Gray,,D GRAY
+3,Dorothy Gray,,
+4,Algabo,,ALGABO
+5,Chicco - Avent,,PARALLEL
+6,Disney,,BEAUTY SOLUTIONS
+7,Bagó,,BAGO
+8,Cuenca,,CUENCA
+9,Oreiro,,
+10,Loval,,LOVAL
+11,Combe,,COMBE
+12,Caviahue,,CAVIAHUE
+13,Johnson Family,,OFF
+14,Comimpar,,COMIMPAR
+15,Active Cosmetic,,ACTIVE COSMETIC
+16,Gamma,,GAMMA
+17,Eurolab - Viasek,,VIASEK
+18,Bernabó,,BERNABO
+19,Laboratorio ENA,,ENA
+20,Elea - Adermicina,,ADERMICINA
+21,IDI,,IDI
+22,Genoma,,GENOMA
+23,Contigo,,IMPORM CONTIGO
+24,SISCOM,,SISCOM
+25,Estereocolor,,PLUMARI
+26,Ferrini - Max,,MAX|FERRINI
+27,Buhl,,BUHL
+28,ACF,,ACF
+29,Lancôme,,
+30,Biosintex,,BIOSINTEX
+31,Loreal,,LOREAL DERMO
+32,BIC,,BIC
+33,Cdimex,,CDIMEX|CDIMEX 2
+34,Nestlé,,
+35,Procter,,PROCTER
+36,Ala,,UNILEVER LIMPIEZA
+37,Sedal,,
+38,Biferdil,,BIFERDIL
+39,Kimberly,,KIMBERLY
+40,Cannon,,CANNON
+41,Coty,,COTY
+42,Colgate,,COLGATE
+43,By Derm - Star Nutrition,,STAR Y BY DERM
+44,Loreal,,LOREAL MAQ
+45,Essity,,ESSITY
+46,Rexona,,UNILEVER 2
+47,Nivea - Eucerin,,NIVEA|EUCERIN
+48,Neutrogena,,JHONSON
+49,Papelera,,PAPELERA
+50,Andrómaco,,ANDROMACO
+51,Farmar,,
+56,Facor,,
+57,Isdin,,
+58,Skin Coreano,,SKIN COREANO

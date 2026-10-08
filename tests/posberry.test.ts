@@ -205,3 +205,36 @@ describe("procesarProductos (POSBerry: stand por CUIT + familia)", () => {
     expect(r.errores).toHaveLength(2);
   });
 });
+
+describe("match por nombre de proveedor (POSBerry sin CUIT)", () => {
+  const { proveedorToStand } = procesarStands([
+    { fila: 2, stand: 8, proveedor: "Cuenca" },
+    { fila: 3, stand: 1, proveedor: "Vamma - Bioderma", alias: "VAMMA|BIODERMA" },
+    { fila: 4, stand: 44, proveedor: "Loreal", alias: "LOREAL MAQ" },
+  ]);
+
+  it("arma proveedorToStand desde el nombre y los alias POSBerry", () => {
+    expect(proveedorToStand.get("CUENCA")).toBe(8);
+    expect(proveedorToStand.get("VAMMA")).toBe(1);
+    expect(proveedorToStand.get("BIODERMA")).toBe(1);
+    expect(proveedorToStand.get("LOREALMAQ")).toBe(44);
+  });
+
+  it("asigna el stand por proveedor cuando el producto no trae CUIT", () => {
+    const stands = [
+      { id: 1, proveedor: "Vamma - Bioderma" },
+      { id: 8, proveedor: "Cuenca" },
+      { id: 44, proveedor: "Loreal" },
+    ];
+    const filas: FilaCruda[] = [
+      { fila: 2, codigo: "7791000000017", descripcion: "A", precio: 100, proveedor: "BIODERMA" },
+      { fila: 3, codigo: "7791000000024", descripcion: "B", precio: 100, proveedor: "LOREAL MAQ" },
+      { fila: 4, codigo: "7791000000031", descripcion: "C", precio: 100, proveedor: "Desconocido SA" },
+    ];
+    const r = procesarProductos(filas, stands, { proveedorToStand });
+    expect(r.productos.find((p) => p.codigo === "7791000000017")!.stand).toBe(1);
+    expect(r.productos.find((p) => p.codigo === "7791000000024")!.stand).toBe(44);
+    expect(r.errores).toHaveLength(1);
+    expect(r.errores[0].motivo).toContain("sin stand asignado");
+  });
+});

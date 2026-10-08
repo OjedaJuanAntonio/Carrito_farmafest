@@ -189,20 +189,11 @@ async function main() {
 
   // ---------- Stands ----------
   const hojaStands = await leerHoja(standsPath);
-  const colStands = mapearColumnas(
-    hojaStands.headers,
-    ALIAS_STANDS,
-    posberry ? ["stand", "proveedor", "cuit"] : undefined
-  );
+  const colStands = mapearColumnas(hojaStands.headers, ALIAS_STANDS);
   if (colStands.faltantes.length > 0) {
     console.error(
       `✖ ${standsPath}: faltan columnas requeridas: ${colStands.faltantes.join(", ")}`
     );
-    if (posberry && colStands.faltantes.includes("cuit")) {
-      console.error(
-        "  El formato POSBerry asigna el stand por CUIT: la tabla de stands necesita una columna «CUIT»."
-      );
-    }
     console.error(`  Encabezados encontrados: ${hojaStands.headers.join(" | ")}`);
     process.exit(2);
   }
@@ -213,8 +204,19 @@ async function main() {
     stand: v[colStands.mapa.get("stand")!],
     proveedor: v[colStands.mapa.get("proveedor")!],
     cuit: colS("cuit", v),
+    alias: colS("alias", v),
   }));
-  const { stands, errores: erroresStands, cuitToStand } = procesarStands(filasStands);
+  const {
+    stands,
+    errores: erroresStands,
+    cuitToStand,
+    proveedorToStand,
+  } = procesarStands(filasStands);
+  if (posberry) {
+    console.log(
+      `ℹ Stand por CUIT (${cuitToStand.size}) o por nombre de proveedor (${proveedorToStand.size}).\n`
+    );
+  }
 
   // ---------- Familias (solo formato POSBerry) ----------
   // La mecánica de cada oferta (porcentaje, 2x1, 2do al N%) sale de esta tabla,
@@ -279,12 +281,14 @@ async function main() {
     precioAnterior: col("precioAnterior", v),
     oferta: col("oferta", v),
     cuit: col("cuit", v),
+    proveedor: col("proveedor", v),
     familia: col("familia", v),
   }));
   const resultado = procesarProductos(filasProd, stands, {
     imageBase: process.env.IMAGE_BASE_URL,
     fotoPorCodigo: construirResolverFotos(),
     cuitToStand: posberry ? cuitToStand : undefined,
+    proveedorToStand: posberry ? proveedorToStand : undefined,
     familias: posberry ? familias : undefined,
   });
 

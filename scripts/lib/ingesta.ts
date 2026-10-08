@@ -28,6 +28,11 @@ export interface FilaCruda {
   /** CUIT del proveedor (formato POSBerry): resuelve el stand vía cuitToStand. */
   cuit?: unknown;
   /**
+   * Nombre/etiqueta del proveedor (formato POSBerry). Si no hay CUIT (o no
+   * mapea), el stand se resuelve por este nombre vía `proveedorToStand`.
+   */
+  proveedor?: unknown;
+  /**
    * Nombre de la familia de POSBerry (columna "Familia"): p. ej. "40%", "2X1",
    * "2DO70%". El precio de la fila es SIEMPRE el precio regular; la mecánica
    * (porcentaje, 2x1, 2do al N%) sale de la tabla de familias (ver
@@ -57,6 +62,11 @@ export interface OpcionesProductos {
    */
   cuitToStand?: Map<string, number>;
   /**
+   * Mapa nombre-de-proveedor normalizado → nº de stand (formato POSBerry sin
+   * CUIT). Se usa como fallback cuando el producto no trae CUIT o no mapea.
+   */
+  proveedorToStand?: Map<string, number>;
+  /**
    * Tabla de familias (formato POSBerry): nombre de familia normalizado → regla
    * de oferta. Define cómo se calcula el precio mostrado a partir del precio
    * regular de la fila (ver `procesarFamilias` y `aplicarFamilia`).
@@ -70,6 +80,11 @@ export interface FilaCrudaStand {
   proveedor?: unknown;
   /** CUIT del proveedor (opcional; habilita el match por CUIT en productos). */
   cuit?: unknown;
+  /**
+   * Alias/etiqueta(s) con que el proveedor figura en POSBerry, separados por
+   * "|" (ej. "VAMMA|BIODERMA"). Habilita el match por nombre cuando no hay CUIT.
+   */
+  alias?: unknown;
 }
 
 export interface Problema {
@@ -151,6 +166,17 @@ function parsearEnteroPositivo(v: unknown): number | null {
 /** Deja solo los dígitos de un CUIT ("20-11111112-5" → "20111111125"). */
 export function normalizarCuit(v: unknown): string {
   return celdaTexto(v).replace(/\D/g, "");
+}
+
+/**
+ * Normaliza el nombre/etiqueta de un proveedor para matchear ("D Gray" ↔
+ * "D GRAY"): mayúsculas, sin acentos, solo letras y números.
+ */
+export function normalizarProveedor(v: unknown): string {
+  return celdaTexto(v)
+    .toUpperCase()
+    .normalize("NFKD")
+    .replace(/[^A-Z0-9]/g, "");
 }
 
 /**
@@ -349,11 +375,21 @@ export function procesarStands(filas: FilaCrudaStand[]): {
   errores: Problema[];
   /** CUIT normalizado → nº de stand (menor, si un CUIT figura en varios). */
   cuitToStand: Map<string, number>;
+  /** Nombre/alias de proveedor normalizado → nº de stand (menor, si repite). */
+  proveedorToStand: Map<string, number>;
 } {
   const stands: Stand[] = [];
   const errores: Problema[] = [];
   const cuitToStand = new Map<string, number>();
+  const proveedorToStand = new Map<string, number>();
   const vistos = new Map<number, number>(); // id → fila
+
+  const ligarProveedor = (nombre: string, id: number) => {
+    const key = normalizarProveedor(nombre);
+    if (!key) return;
+    const prev = proveedorToStand.get(key);
+    if (prev === undefined || id < prev) proveedorToStand.set(key, id);
+  };
 
   for (const f of filas) {
     const proveedor = celdaTexto(f.proveedor);
@@ -401,9 +437,14 @@ export function procesarStands(filas: FilaCrudaStand[]): {
       const prev = cuitToStand.get(cuit);
       if (prev === undefined || id < prev) cuitToStand.set(cuit, id);
     }
+
+    // Mapa Proveedor→stand: el propio nombre del stand + los alias de POSBerry
+    // ("VAMMA|BIODERMA"). Habilita el match por nombre cuando no hay CUIT.
+    ligarProveedor(proveedor, id);
+    for (const a of celdaTexto(f.alias).split("|")) ligarProveedor(a, id);
   }
   stands.sort((a, b) => a.id - b.id);
-  return { stands, errores, cuitToStand };
+  return { stands, errores, cuitToStand, proveedorToStand };
 }
 
 // ---------- Procesamiento de productos ----------
@@ -464,19 +505,24 @@ export function procesarProductos(
       });
       continue;
     }
-    // Stand: por CUIT (formato POSBerry) o por columna Stand (formato propio).
+    // Stand: formato POSBerry (por CUIT y, si no hay, por nombre de proveedor)
+    // o formato propio (por columna Stand).
     let standId: number;
-    if (opciones.cuitToStand) {
+    if (opciones.cuitToStand || opciones.proveedorToStand) {
       const cuit = normalizarCuit(f.cuit);
-      if (!cuit) {
-        errores.push({ fila: f.fila, motivo: `producto ${codigo} sin CUIT`, contexto: descripcion });
-        continue;
+      let sid: number | undefined;
+      if (cuit) sid = opciones.cuitToStand?.get(cuit);
+      if (sid === undefined && opciones.proveedorToStand) {
+        const prov = normalizarProveedor(f.proveedor);
+        if (prov) sid = opciones.proveedorToStand.get(prov);
       }
-      const sid = opciones.cuitToStand.get(cuit);
       if (sid === undefined) {
+        const detalle = cuit
+          ? `CUIT ${cuit}`
+          : `proveedor «${celdaTexto(f.proveedor)}»`;
         errores.push({
           fila: f.fila,
-          motivo: `CUIT ${cuit} sin stand asignado (no figura en la tabla de stands)`,
+          motivo: `${detalle} sin stand asignado (no figura en la tabla de stands)`,
           contexto: descripcion,
         });
         continue;
@@ -699,6 +745,7 @@ const ALIAS_STANDS: Record<string, readonly string[]> = {
   stand: ["stand", "numerodestand", "nrostand", "numstand", "numero", "nro"],
   proveedor: ["proveedor", "nombre", "razonsocial", "empresa"],
   cuit: ["cuit", "cuitproveedor", "cuitprov"],
+  alias: ["aliasposberry", "alias", "proveedorposberry", "etiquetaposberry"],
 };
 
 /**
@@ -712,6 +759,7 @@ const ALIAS_PRODUCTOS_POSBERRY: Record<string, readonly string[]> = {
   descripcion: ["descripcion", "producto", "detalle", "nombre"],
   precio: ["preciodeventa", "precioventa", "pvp"],
   cuit: ["cuitproveedor", "cuit", "cuitprov"],
+  proveedor: ["proveedor"],
   familia: ["familia"],
   foto: ["urldelaimagen", "urlimagen", "foto", "imagen"],
 };
