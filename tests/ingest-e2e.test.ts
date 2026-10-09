@@ -79,6 +79,7 @@ describe("ingesta E2E con datos rotos", () => {
     expect(codigos).toEqual([
       "7791000000017",
       "7791000000024",
+      "7791000000031", // "precio roto": ahora se publica con precio 0 (a confirmar)
       "7791000000062",
       "7791000000079",
       "7791000000086",
@@ -128,7 +129,7 @@ describe("ingesta E2E con datos rotos", () => {
 
   it("reporta cada fila rota con su motivo", () => {
     expect(stdout).toContain("duplicado");
-    expect(stdout).toContain("precio inválido");
+    expect(stdout).toContain("sin precio"); // "precio roto" → se publica a confirmar
     expect(stdout).toContain("inexistente");
     expect(stdout).toContain("código de barras inválido");
     expect(stdout).toContain("sin descripción");
@@ -140,7 +141,7 @@ describe("ingesta E2E con datos rotos", () => {
     const manifest = JSON.parse(
       readFileSync(path.join(salida, "manifest.json"), "utf8")
     );
-    expect(manifest.productos).toBe(6);
+    expect(manifest.productos).toBe(7);
     expect(manifest.stands).toBe(2);
     expect(manifest.version).toMatch(/^[0-9a-f]{10}$/);
   });

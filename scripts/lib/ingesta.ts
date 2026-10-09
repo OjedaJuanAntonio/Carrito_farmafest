@@ -496,14 +496,20 @@ export function procesarProductos(
       errores.push({ fila: f.fila, motivo: `producto ${codigo} sin descripción` });
       continue;
     }
-    const precio = parsearPrecio(f.precio);
+    // Precio: si falta o es inválido, NO se descarta — el producto se publica
+    // con precio 0 ("a confirmar") para que se vea cuál es. Solo se avisa si vino
+    // algo no vacío que no se pudo interpretar (una celda vacía es lo esperado
+    // mientras no se cargó el precio todavía).
+    let precio = parsearPrecio(f.precio);
     if (!Number.isFinite(precio) || precio <= 0) {
-      errores.push({
-        fila: f.fila,
-        motivo: `precio inválido «${celdaTexto(f.precio)}»`,
-        contexto: descripcion,
-      });
-      continue;
+      if (celdaTexto(f.precio) !== "") {
+        advertencias.push({
+          fila: f.fila,
+          motivo: `precio «${celdaTexto(f.precio)}» inválido; se publica sin precio (a confirmar)`,
+          contexto: descripcion,
+        });
+      }
+      precio = 0;
     }
     // Stand: formato POSBerry (por CUIT y, si no hay, por nombre de proveedor)
     // o formato propio (por columna Stand).
@@ -554,8 +560,9 @@ export function procesarProductos(
 
     // Oferta por familia (formato POSBerry): el precio de la fila es el REGULAR;
     // la mecánica (porcentaje, 2x1, 2do al N%) sale de la tabla de familias.
+    // Sin precio (0) no se aplica oferta (no tiene sentido descontar lo desconocido).
     const nombreFamilia = celdaTexto(f.familia);
-    if (nombreFamilia !== "" && opciones.familias) {
+    if (producto.precio > 0 && nombreFamilia !== "" && opciones.familias) {
       const regla = opciones.familias.get(normalizarFamilia(nombreFamilia));
       if (!regla) {
         advertencias.push({
@@ -602,7 +609,8 @@ export function procesarProductos(
     }
 
     // Precio anterior (para mostrar el ahorro): solo si es mayor al vigente.
-    if (celdaTexto(f.precioAnterior) !== "") {
+    // Sin precio vigente (0) no aplica.
+    if (producto.precio > 0 && celdaTexto(f.precioAnterior) !== "") {
       const anterior = parsearPrecio(f.precioAnterior);
       if (!Number.isFinite(anterior) || anterior <= 0) {
         advertencias.push({

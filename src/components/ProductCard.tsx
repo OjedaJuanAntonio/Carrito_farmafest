@@ -60,12 +60,18 @@ export function ProductCard({
                 {formatPrice(product.precioAnterior)}
               </p>
             )}
-            <p className="text-lg font-bold text-brand-dark leading-none mt-0.5">
-              {formatPrice(product.precio)}
-              {esDosPorUno(product) && (
-                <span className="text-[11px] font-medium text-ink-muted ml-1">c/u</span>
-              )}
-            </p>
+            {product.precio > 0 ? (
+              <p className="text-lg font-bold text-brand-dark leading-none mt-0.5">
+                {formatPrice(product.precio)}
+                {esDosPorUno(product) && (
+                  <span className="text-[11px] font-medium text-ink-muted ml-1">c/u</span>
+                )}
+              </p>
+            ) : (
+              <p className="text-sm font-semibold text-ink-muted leading-none mt-0.5">
+                Precio a confirmar
+              </p>
+            )}
             {stock && (
               <p className={`text-[11px] mt-1 ${stock.className}`}>
                 {stock.label}

@@ -225,14 +225,22 @@ function SearchResultCard({
         </p>
       </div>
       <div className="text-right whitespace-nowrap">
-        {doc.precioAnterior !== undefined && (
-          <p className="text-[11px] text-ink-muted line-through leading-none">
-            {formatPrice(doc.precioAnterior)}
+        {doc.precio > 0 ? (
+          <>
+            {doc.precioAnterior !== undefined && (
+              <p className="text-[11px] text-ink-muted line-through leading-none">
+                {formatPrice(doc.precioAnterior)}
+              </p>
+            )}
+            <p className="text-base font-bold text-brand-dark leading-none mt-0.5">
+              {formatPrice(doc.precio)}
+            </p>
+          </>
+        ) : (
+          <p className="text-[11px] font-semibold text-ink-muted leading-none">
+            A confirmar
           </p>
         )}
-        <p className="text-base font-bold text-brand-dark leading-none mt-0.5">
-          {formatPrice(doc.precio)}
-        </p>
       </div>
     </Link>
   );

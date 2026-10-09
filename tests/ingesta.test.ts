@@ -144,18 +144,20 @@ describe("procesarProductos", () => {
     expect(r.errores[0].motivo).toContain("fila 2");
   });
 
-  it("descarta precios inválidos (texto, cero, negativo)", () => {
+  it("mantiene productos sin precio válido con precio 0 (a confirmar)", () => {
     const r = procesarProductos(
       [
         fila({ codigo: "7791000000017", precio: "gratis" }, 2),
         fila({ codigo: "7791000000024", precio: 0 }, 3),
         fila({ codigo: "7791000000031", precio: -10 }, 4),
+        fila({ codigo: "7791000000048", precio: "" }, 5), // vacío: sin aviso
       ],
       STANDS
     );
-    expect(r.productos).toHaveLength(0);
-    expect(r.errores).toHaveLength(3);
-    for (const e of r.errores) expect(e.motivo).toContain("precio inválido");
+    expect(r.productos).toHaveLength(4);
+    for (const p of r.productos) expect(p.precio).toBe(0);
+    // Los no vacíos ("gratis", 0, -10) avisan; el vacío se publica en silencio.
+    expect(r.advertencias.some((a) => a.motivo.includes("sin precio"))).toBe(true);
   });
 
   it("descarta stands inexistentes", () => {
