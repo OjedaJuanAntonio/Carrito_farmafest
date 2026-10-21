@@ -20,7 +20,7 @@ export const branding = {
   /** Bajada corta que aparece en la home */
   tagline: "Precios y ofertas del evento",
   /** Fechas del evento (solo texto informativo) */
-  eventDates: "15 al 17 de septiembre de 2026 · a confirmar",
+  eventDates: "23 al 25 de octubre de 2026",
   /** Lugar del evento (texto informativo de la landing) */
   eventPlace: "Corrientes · sede a confirmar",
 
