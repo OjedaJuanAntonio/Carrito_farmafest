@@ -24,7 +24,7 @@ export function VenueMap() {
       <svg
         viewBox={`0 0 ${VENUE_VIEWBOX.w} ${VENUE_VIEWBOX.h}`}
         role="group"
-        aria-label="Mapa del predio con los stands del evento"
+        aria-label="Plano del predio con los stands del evento"
         className="block h-auto w-full mx-auto"
         style={{ maxHeight: "80svh" }}
       >

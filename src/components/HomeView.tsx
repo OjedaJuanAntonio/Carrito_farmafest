@@ -108,18 +108,12 @@ export function HomeView({
             >
               Stands y marcas →
             </Link>
-            <Link
-              href="/evento/"
-              className="text-sm font-semibold text-brand-dark rounded-lg px-3 py-1.5 bg-brand-soft active:opacity-80"
-            >
-              Conocé el evento →
-            </Link>
             {FEATURES.mapa && (
               <Link
                 href="/mapa/"
                 className="text-sm font-semibold text-brand-dark rounded-lg px-3 py-1.5 bg-brand-soft active:opacity-80"
               >
-                Mapa del predio →
+                Plano del predio →
               </Link>
             )}
           </div>

@@ -38,7 +38,7 @@ export function Header() {
               href="/mapa/"
               className="text-[13px] font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
             >
-              Mapa
+              Plano
             </Link>
           )}
           <Link
@@ -46,12 +46,6 @@ export function Header() {
             className="text-[13px] font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
           >
             Stands
-          </Link>
-          <Link
-            href="/evento/"
-            className="text-[13px] font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
-          >
-            Evento
           </Link>
           {FEATURES.carrito && <CartLink />}
         </nav>
