@@ -22,7 +22,7 @@ export const branding = {
   /** Fechas del evento (solo texto informativo) */
   eventDates: "23 al 25 de octubre de 2026",
   /** Lugar del evento (texto informativo de la landing) */
-  eventPlace: "Corrientes · sede a confirmar",
+  eventPlace: "Centro de Convenciones Corrientes, Gregorio Pomar 802",
 
   /** Wordmark oficial (SVG 3000×700). Se usa en header y hero. */
   logoLarge: "/img/logo-farmafest.svg",

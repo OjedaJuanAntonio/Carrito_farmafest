@@ -137,8 +137,7 @@ export default function EventoPage() {
             precio final siempre lo confirma la caja del stand al cobrar.
           </Faq>
           <Faq q="¿Cuándo y dónde es?">
-            {branding.eventDates}. {branding.eventPlace}. Apenas se confirmen
-            fechas y sede definitivas, las vas a ver acá.
+            {branding.eventDates}, en {branding.eventPlace}.
           </Faq>
         </div>
       </section>
