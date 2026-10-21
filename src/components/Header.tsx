@@ -42,6 +42,12 @@ export function Header() {
             </Link>
           )}
           <Link
+            href="/stands/"
+            className="text-[13px] font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
+          >
+            Stands
+          </Link>
+          <Link
             href="/evento/"
             className="text-[13px] font-semibold text-brand px-2 py-2 rounded-lg active:bg-brand-soft"
           >

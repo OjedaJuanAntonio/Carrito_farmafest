@@ -103,6 +103,12 @@ export function HomeView({
               Ver ofertas →
             </Link>
             <Link
+              href="/stands/"
+              className="text-sm font-semibold text-brand-dark rounded-lg px-3 py-1.5 bg-brand-soft active:opacity-80"
+            >
+              Stands y marcas →
+            </Link>
+            <Link
               href="/evento/"
               className="text-sm font-semibold text-brand-dark rounded-lg px-3 py-1.5 bg-brand-soft active:opacity-80"
             >
